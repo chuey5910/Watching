@@ -11,21 +11,21 @@ def S(name, t, home, feed=None, kind="rss", region="ทั่วประเท�
 
 
 MAINSTREAM = [
-    S("ไทยพีบีเอส", "mainstream", "https://www.thaipbs.or.th", "https://www.thaipbs.or.th/rss/news.xml", priority=3,
+    S("ไทยพีบีเอส", "mainstream", "https://www.thaipbs.or.th", kind="gnews", priority=3,
       alert_categories="disaster,protest"),
     S("สำนักข่าวไทย (อสมท.)", "mainstream", "https://tna.mcot.net", kind="gnews", priority=2),
     S("สำนักข่าวกรมประชาสัมพันธ์ (NNT)", "government", "https://thainews.prd.go.th", kind="gnews", priority=2),
     S("ไทยรัฐออนไลน์", "mainstream", "https://www.thairath.co.th", "https://www.thairath.co.th/rss/news", priority=3),
     S("ข่าวสด", "mainstream", "https://www.khaosod.co.th", "https://www.khaosod.co.th/feed", priority=2),
     S("มติชนออนไลน์", "mainstream", "https://www.matichon.co.th", "https://www.matichon.co.th/feed", priority=3),
-    S("เดลินิวส์", "mainstream", "https://www.dailynews.co.th", "https://www.dailynews.co.th/feed/", priority=2),
+    S("เดลินิวส์", "mainstream", "https://www.dailynews.co.th", "https://www.dailynews.co.th/news/feed", priority=2),
     S("คมชัดลึก", "mainstream", "https://www.komchadluek.net", kind="gnews"),
     S("แนวหน้า", "mainstream", "https://www.naewna.com", kind="gnews"),
     S("ผู้จัดการออนไลน์", "mainstream", "https://mgronline.com", "https://mgronline.com/rss/politics.xml", priority=2),
     S("โพสต์ทูเดย์", "mainstream", "https://www.posttoday.com", kind="gnews"),
     S("ไทยโพสต์", "mainstream", "https://www.thaipost.net", kind="gnews"),
     S("บ้านเมือง", "mainstream", "https://www.banmuang.co.th", kind="gnews"),
-    S("สยามรัฐ", "mainstream", "https://siamrath.co.th", "https://siamrath.co.th/rss.xml"),
+    S("สยามรัฐ", "mainstream", "https://siamrath.co.th", kind="gnews"),
     S("ช่อง 3 (CH3Plus)", "mainstream", "https://ch3plus.com", kind="gnews"),
     S("ช่อง 7HD", "mainstream", "https://news.ch7.com", kind="gnews"),
     S("อมรินทร์ทีวี", "mainstream", "https://www.amarintv.com", kind="gnews"),
@@ -38,7 +38,7 @@ MAINSTREAM = [
     S("ช่อง 8", "mainstream", "https://www.thaich8.com", kind="gnews"),
     S("MONO29", "mainstream", "https://mono29.com", kind="gnews"),
     S("ประชาชาติธุรกิจ", "mainstream", "https://www.prachachat.net", "https://www.prachachat.net/feed", priority=2),
-    S("กรุงเทพธุรกิจ", "mainstream", "https://www.bangkokbiznews.com", "https://www.bangkokbiznews.com/rss", priority=2),
+    S("กรุงเทพธุรกิจ", "mainstream", "https://www.bangkokbiznews.com", kind="gnews", priority=2),
     S("ฐานเศรษฐกิจ", "mainstream", "https://www.thansettakij.com", kind="gnews"),
     S("The Standard", "mainstream", "https://thestandard.co", "https://thestandard.co/feed/", priority=2),
     S("Thairath Plus", "mainstream", "https://plus.thairath.co.th", kind="gnews"),
@@ -53,7 +53,7 @@ MAINSTREAM = [
     S("101.world", "mainstream", "https://www.the101.world", "https://www.the101.world/feed/"),
     S("สำนักข่าวชายขอบ", "local", "https://transbordernews.in.th", "https://transbordernews.in.th/home/feed/", region="ชายแดน", priority=2),
     S("Bangkok Post", "mainstream", "https://www.bangkokpost.com", "https://www.bangkokpost.com/rss/data/topstories.xml", lang="en", priority=2),
-    S("The Nation Thailand", "mainstream", "https://www.nationthailand.com", "https://www.nationthailand.com/rss", lang="en"),
+    S("The Nation Thailand", "mainstream", "https://www.nationthailand.com", kind="gnews", lang="en"),
     S("Khaosod English", "mainstream", "https://www.khaosodenglish.com", "https://www.khaosodenglish.com/feed/", lang="en"),
     S("Thai Enquirer", "mainstream", "https://www.thaienquirer.com", "https://www.thaienquirer.com/feed/", lang="en"),
 ]
@@ -109,12 +109,12 @@ LOCAL = [
     S("ราชบุรีนิวส์", "local", "https://www.ratchaburinews.com", kind="gnews", region="ราชบุรี"),
     # ใต้
     S("สงขลาโฟกัส", "local", "https://www.songkhlafocus.com", kind="gnews", region="สงขลา", priority=2),
-    S("The Phuket News", "local", "https://www.thephuketnews.com", "https://www.thephuketnews.com/rss.php", region="ภูเก็ต", lang="en"),
+    S("The Phuket News", "local", "https://www.thephuketnews.com", kind="gnews", region="ภูเก็ต", lang="en"),
     S("ภูเก็ตนิวส์", "local", "https://www.phuketnews.co.th", kind="gnews", region="ภูเก็ต"),
     S("สำนักข่าวภาคใต้ (South Thailand News)", "local", "https://www.southnews.co.th", kind="gnews", region="ภาคใต้"),
     S("หาดใหญ่โฟกัส", "local", "https://www.hatyaifocus.com", kind="gnews", region="สงขลา"),
     S("Wartani", "local", "https://wartani.com", kind="gnews", region="ชายแดนใต้", priority=2),
-    S("The Motive", "local", "https://themotive.co", "https://themotive.co/feed/", region="ชายแดนใต้", priority=2),
+    S("The Motive", "local", "https://themotive.co", kind="gnews", region="ชายแดนใต้", priority=2),
     S("Deep South Watch", "local", "https://deepsouthwatch.org", kind="gnews", region="ชายแดนใต้", priority=2),
     S("สำนักข่าวอามาน", "local", "https://www.amannews.co", kind="gnews", region="ชายแดนใต้"),
     S("สุราษฎร์นิวส์", "local", "https://www.suratnews.com", kind="gnews", region="สุราษฎร์ธานี"),
@@ -122,7 +122,7 @@ LOCAL = [
     S("ตรังนิวส์", "local", "https://www.trangnews.com", kind="gnews", region="ตรัง"),
     S("กระบี่นิวส์", "local", "https://www.krabinews.com", kind="gnews", region="กระบี่"),
     # เครือข่ายท้องถิ่นระดับประเทศ
-    S("77 ข่าวเด็ด", "local", "https://www.77kaoded.com", "https://www.77kaoded.com/feed", region="ทุกจังหวัด", priority=3),
+    S("77 ข่าวเด็ด", "local", "https://www.77kaoded.com", kind="gnews", region="ทุกจังหวัด", priority=3),
     S("สยามรัฐ ภูมิภาค", "local", "https://siamrath.co.th/regional", kind="gnews", region="ทุกจังหวัด"),
     S("เนชั่นออนไลน์ ภูมิภาค", "local", "https://www.nationtv.tv/news/region", kind="gnews", region="ทุกจังหวัด"),
     S("ไทยพีบีเอส นักข่าวพลเมือง", "local", "https://thecitizen.plus", kind="gnews", region="ทุกจังหวัด", priority=2),
@@ -158,9 +158,9 @@ FOREIGN = [
     # เมียนมา / ชายแดน
     S("The Irrawaddy", "foreign", "https://www.irrawaddy.com", "https://www.irrawaddy.com/feed", country="เมียนมา", lang="en", priority=3, alert_categories="protest,disaster"),
     S("Myanmar Now", "foreign", "https://myanmar-now.org", "https://myanmar-now.org/en/feed/", country="เมียนมา", lang="en", priority=2),
-    S("Mizzima", "foreign", "https://eng.mizzima.com", "https://eng.mizzima.com/feed", country="เมียนมา", lang="en"),
+    S("Mizzima", "foreign", "https://eng.mizzima.com", kind="gnews", country="เมียนมา", lang="en"),
     S("DVB", "foreign", "https://english.dvb.no", "https://english.dvb.no/feed", country="เมียนมา", lang="en"),
-    S("Frontier Myanmar", "foreign", "https://www.frontiermyanmar.net", "https://www.frontiermyanmar.net/en/feed/", country="เมียนมา", lang="en"),
+    S("Frontier Myanmar", "foreign", "https://www.frontiermyanmar.net", kind="gnews", country="เมียนมา", lang="en"),
     S("Karen News", "foreign", "https://karennews.org", "https://karennews.org/feed/", country="เมียนมา", lang="en", priority=2),
     S("Shan Herald (SHAN)", "foreign", "https://english.shannews.org", "https://english.shannews.org/feed/", country="เมียนมา", lang="en"),
     S("BNI Multimedia", "foreign", "https://www.bnionline.net", "https://www.bnionline.net/en/rss.xml", country="เมียนมา", lang="en"),
@@ -173,7 +173,7 @@ FOREIGN = [
     S("Malay Mail", "foreign", "https://www.malaymail.com", "https://www.malaymail.com/feed/rss/malaysia", country="มาเลเซีย", lang="en"),
     S("Free Malaysia Today", "foreign", "https://www.freemalaysiatoday.com", "https://www.freemalaysiatoday.com/feed/", country="มาเลเซีย", lang="en"),
     S("VnExpress International", "foreign", "https://e.vnexpress.net", "https://e.vnexpress.net/rss/news.rss", country="เวียดนาม", lang="en"),
-    S("Tuoi Tre News", "foreign", "https://tuoitrenews.vn", "https://tuoitrenews.vn/rss/home.rss", country="เวียดนาม", lang="en"),
+    S("Tuoi Tre News", "foreign", "https://tuoitrenews.vn", "https://tuoitrenews.vn/rss/", country="เวียดนาม", lang="en"),
     # ภัยพิบัติระดับภูมิภาค
     S("ReliefWeb — Thailand", "foreign", "https://reliefweb.int/country/tha", "https://reliefweb.int/updates/rss.xml?advanced-search=%28C226%29", country="UN", lang="en", keep_all=True, priority=2),
     S("GDACS (แจ้งเตือนภัยพิบัติโลก)", "foreign", "https://www.gdacs.org", "https://www.gdacs.org/xml/rss.xml", country="EU/UN", lang="en", keep_all=True, alert_categories="disaster"),
@@ -198,13 +198,38 @@ DEFAULT_RULES = [
 DEFAULT_WATCH = ["เหมืองแร่", "ไล่รื้อ", "ปิดถนน", "ค่าไฟ", "ราคาข้าว", "ชายแดน", "อภิปรายไม่ไว้วางใจ", "ยุบสภา"]
 
 
-def seed(reset: bool = False) -> int:
+# ฟิลด์ที่ --update ยอมเขียนทับของเดิม — จำกัดไว้เท่าที่จำเป็นต่อการดึงข่าว
+# ไม่แตะ enabled/categories/alert_* เพราะผู้ใช้อาจปรับเองผ่านหน้าเว็บไปแล้ว
+SYNC_FIELDS = ("feed_url", "fetch_kind", "homepage")
+
+
+def seed(reset: bool = False, update: bool = False) -> int:
+    """update=True จะซิงก์ URL/ชนิดการดึงของแหล่งที่มีอยู่แล้วให้ตรงกับไฟล์นี้
+
+    จำเป็นเพราะปกติ seed ข้ามแหล่งที่ชื่อซ้ำ การแก้ URL ในไฟล์นี้จึงไม่มีผล
+    กับฐานข้อมูลที่ seed ไปแล้ว
+    """
     if reset:
         Source.query.delete()
-    existing = {s.name for s in Source.query.all()}
+    by_name = {s.name: s for s in Source.query.all()}
     n = 0
     for d in MAINSTREAM + GOVERNMENT + LOCAL + FOREIGN:
-        if d["name"] in existing:
+        cur = by_name.get(d["name"])
+        if cur is not None:
+            if update:
+                changed = []
+                for f in SYNC_FIELDS:
+                    want = d.get(f)
+                    if getattr(cur, f) != want:
+                        changed.append(f"{f}: {getattr(cur, f)} -> {want}")
+                        setattr(cur, f, want)
+                if changed:
+                    # ล้างผลการค้นหา feed รอบเก่า ไม่งั้นจะยังดึงจาก URL เดิมที่พังอยู่
+                    cur.resolved_feed_url = None
+                    cur.etag = cur.modified = None
+                    cur.last_status, cur.last_error = "new", None
+                    print(f"  [{cur.id}] {cur.name}: " + " | ".join(changed))
+                    n += 1
             continue
         db.session.add(Source(**d))
         n += 1

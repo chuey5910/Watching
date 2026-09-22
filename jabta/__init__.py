@@ -117,10 +117,11 @@ def create_app(config_object=Config) -> Flask:
     # ---------- CLI ----------
     @app.cli.command("seed")
     @click.option("--reset", is_flag=True, help="ลบแหล่งข่าวเดิมทั้งหมดก่อน")
-    def seed_cmd(reset):
+    @click.option("--update", is_flag=True, help="ซิงก์ URL/ชนิดการดึงของแหล่งที่มีอยู่แล้วให้ตรงกับ seed_sources.py")
+    def seed_cmd(reset, update):
         from .seed_sources import seed
-        n = seed(reset=reset)
-        click.echo(f"เพิ่มแหล่งข่าว {n} รายการ")
+        n = seed(reset=reset, update=update)
+        click.echo(f"{'อัปเดต' if update else 'เพิ่ม'}แหล่งข่าว {n} รายการ")
 
     @app.cli.command("fetch")
     @click.option("--source", "source_id", type=int, default=None)
@@ -240,19 +241,21 @@ def create_app(config_object=Config) -> Flask:
                 except Exception as ex:
                     click.echo(f"    เปิดหน้าแรกไม่ได้: {type(ex).__name__}")
                 cands += [("ลองเดา", urljoin(src.homepage, p)) for p in PATHS]
+            RANK = {"เดิม": 0, "ในหน้าแรก": 1, "ลองเดา": 2}
             for label, url in cands:
-                if url in seen:
-                    continue
+                if url in seen or "/comments/" in url:
+                    continue          # ฟีดคอมเมนต์ไม่ใช่ฟีดข่าว
                 seen.add(url)
                 n, msg = try_url(url)
                 if n:
-                    good.append((n, url, label))
+                    good.append((n, label, url))
                     click.echo(f"    ใช้ได้  {n:3} รายการ  [{label}] {url}")
             if not good:
                 click.echo("    !! ไม่เจอฟีดที่ใช้ได้เลย — ควรเปลี่ยนเป็น fetch_kind=gnews หรือตัดทิ้ง")
             else:
-                best = max(good)[1]
-                click.echo(f"    >> แนะนำ: {best}")
+                # ได้ข่าวมากสุดก่อน เท่ากันให้ยึด URL เดิม > ที่เจอในหน้าแรก > ที่เดา
+                best = min(good, key=lambda g: (-g[0], RANK.get(g[1], 9), len(g[2])))
+                click.echo(f"    >> แนะนำ: {best[2]}" + ("  (เดิมใช้ได้อยู่แล้ว)" if best[1] == "เดิม" else ""))
             click.echo("")
 
     @app.cli.command("create-admin")
