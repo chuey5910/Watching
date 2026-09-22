@@ -323,6 +323,89 @@ def create_app(config_object=Config) -> Flask:
             for label, route, why in bad:
                 click.echo(f"  {label:22} {route}\n      {why}")
 
+    @app.cli.command("import-watchlist")
+    @click.argument("path", type=click.Path(exists=True))
+    @click.option("--apply", "do_apply", is_flag=True, help="นำเข้าจริง (ถ้าไม่ใส่จะแค่แสดงผลให้ตรวจ)")
+    @click.option("--only", default="", help="นำเข้าเฉพาะประเภท เช่น person,page (ว่าง = ทุกประเภทที่แยกได้)")
+    def import_watchlist_cmd(path, do_apply, only):
+        """อ่าน PDF รายชื่อเพจ/บุคคลที่ต้องเฝ้าระวัง แยกประเภท แล้วนำเข้าเป็นแหล่งข่าว"""
+        from .models import Source
+        from .watchlist import extract_rows, classify, url_note, strip_province
+
+        want = {x.strip() for x in only.split(",") if x.strip()}
+        rows = extract_rows(path)
+        rsshub = (app.config.get("RSSHUB_BASE") or "").rstrip("/")
+
+        buckets = {"person": [], "page": [], "group": [], "unknown": []}
+        skipped = []
+        for r in rows:
+            label = strip_province(r["text"]) or r["extra"] or "(ไม่มีชื่อ)"
+            if not r["urls"]:
+                skipped.append((label, "", "ไม่มีลิงก์"))
+                continue
+            for u in r["urls"]:
+                note = url_note(u)
+                if note and "ลิงก์แชร์ ต้องตาม" not in note:
+                    skipped.append((label, u, note))
+                    continue
+                kind, conf, why = classify(r["text"], u)
+                buckets[kind].append({"label": label, "url": u, "conf": conf,
+                                      "why": why, "province": r["province"], "share": bool(note)})
+
+        click.echo(f"อ่านได้ {len(rows)} แถว\n")
+        for k, title in (("person", "บุคคล"), ("page", "เพจ/องค์กร"),
+                         ("group", "กลุ่ม Facebook"), ("unknown", "แยกไม่ได้ ต้องตรวจเอง")):
+            items = buckets[k]
+            click.echo(f"--- {title} ({len(items)}) ---")
+            for it in items:
+                flag = " [ลิงก์แชร์]" if it["share"] else ""
+                click.echo(f"  {it['conf']:5} {it['label'][:38]:40} {it['url'][:52]}{flag}")
+            click.echo("")
+        if skipped:
+            click.echo(f"--- ข้ามไป ({len(skipped)}) ---")
+            for label, u, why in skipped:
+                click.echo(f"  {label[:34]:36} {why}  {u[:46]}")
+            click.echo("")
+
+        if not do_apply:
+            click.echo("นี่คือการแสดงผลให้ตรวจเท่านั้น — ใส่ --apply เพื่อนำเข้าจริง")
+            return
+
+        added = dup = 0
+        for k, items in buckets.items():
+            if k == "unknown" or (want and k not in want):
+                continue
+            for it in items:
+                name = f"{it['label']} ({it['province']})"[:200]
+                if Source.query.filter_by(name=name).first():
+                    dup += 1
+                    continue
+                handle = it["url"].rstrip("/").split("/")[-1].split("?")[0]
+                # วัดจริงด้วย probe-rsshub แล้ว: route facebook ของ RSSHub คืน 404
+                # (ถูกถอดออกเพราะ Facebook บังคับ login) ส่วน twitter/instagram คืน 503
+                # จึงไม่ตั้งให้ใช้ RSSHub กับสามแพลตฟอร์มนี้ แม้จะตั้ง RSSHUB_BASE ไว้
+                # เหลือทางเดียวคือติดตามผ่านข่าวที่กล่าวถึงชื่อนั้น
+                RSSHUB_OK = {"tiktok": "/tiktok/user/@{h}"}
+                plat = "facebook"
+                for p_, frag in (("tiktok", "tiktok.com"), ("telegram", "t.me/")):
+                    if frag in it["url"].lower():
+                        plat = p_
+                if rsshub and plat in RSSHUB_OK:
+                    fetch_kind, feed = "rsshub", RSSHUB_OK[plat].format(h=handle)
+                else:
+                    fetch_kind, feed = "gnews_query", it["label"]
+                db.session.add(Source(
+                    name=name, source_type="social", platform="facebook",
+                    homepage=it["url"], feed_url=feed, fetch_kind=fetch_kind,
+                    handle=handle, group_name=it["province"] or None,
+                    region=it["province"] or None, categories=",".join(CATEGORIES),
+                    language="th", country="ไทย"))
+                added += 1
+        db.session.commit()
+        click.echo(f"นำเข้า {added} รายการ · ข้ามเพราะมีชื่อซ้ำ {dup}")
+        click.echo("บัญชี Facebook ติดตามผ่านคำค้น Google News (ได้ข่าวที่กล่าวถึงชื่อนั้น "
+                   "ไม่ใช่โพสต์ของเขา) เพราะ Facebook ไม่มี RSS และ route ของ RSSHub ถูกถอดออกแล้ว")
+
     @app.cli.command("create-admin")
     @click.argument("username")
     @click.argument("password")
