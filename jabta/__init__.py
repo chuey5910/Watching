@@ -131,6 +131,53 @@ def create_app(config_object=Config) -> Flask:
         apply_rules(s["kept_ids"]); send_alerts(s["alert_ids"]); expire_pins()
         click.echo(f"แหล่ง {s['sources']} ok={s['ok']} error={s['error']} ใหม่={s['new']} เก็บ={s['kept']}")
 
+    @app.cli.command("source-report")
+    @click.option("--all", "show_all", is_flag=True, help="แสดงทุกแหล่ง ไม่ใช่เฉพาะที่มีปัญหา")
+    def source_report_cmd(show_all):
+        """สรุปว่าแหล่งไหนดึงจากเว็บตัวเองจริง แหล่งไหนตกไปใช้ Google News แทน
+
+        fetch เขียนว่า ok ได้แม้โดเมนจะตายไปแล้ว เพราะมี fallback ไปหยิบจาก
+        Google News ให้อัตโนมัติ ตัวเลข error=0 จึงไม่ได้แปลว่าทุกแหล่งใช้ได้จริง
+        """
+        from sqlalchemy import func
+        from .models import Source, Article
+
+        counts = dict(
+            db.session.query(Article.source_id, func.count(Article.id))
+            .group_by(Article.source_id).all()
+        )
+        direct, fellback, empty, errored = [], [], [], []
+        for s in Source.query.order_by(Source.source_type, Source.name).all():
+            n = counts.get(s.id, 0)
+            resolved = s.resolved_feed_url or ""
+            if s.last_status == "error":
+                errored.append((s, n, s.last_error or ""))
+            elif s.fetch_kind in ("gnews", "gnews_query"):
+                direct.append((s, n))          # ตั้งใจใช้ Google News ตั้งแต่แรก
+            elif "news.google.com" in resolved:
+                fellback.append((s, n))        # ตั้งเป็น rss แต่ดึงไม่ได้ เลยตกมาใช้ gnews
+            elif n == 0:
+                empty.append((s, n))
+            else:
+                direct.append((s, n))
+
+        click.echo(f"ดึงจากแหล่งเองได้ {len(direct)} · ตกไปใช้ Google News {len(fellback)} "
+                   f"· ได้ 0 ข่าว {len(empty)} · error {len(errored)}")
+        for label, rows in (("ตกไปใช้ Google News แทน (โดเมนหรือ RSS น่าจะใช้ไม่ได้)", fellback),
+                            ("ดึงได้แต่ไม่มีข่าวเลย", empty),
+                            ("error", errored)):
+            if not rows:
+                continue
+            click.echo(f"\n--- {label} ({len(rows)}) ---")
+            for row in rows:
+                s, n = row[0], row[1]
+                extra = f"  {row[2][:80]}" if len(row) > 2 else ""
+                click.echo(f"{s.id}\t{s.source_type}\t{s.fetch_kind}\t{s.name}\t{s.feed_url}\t{n} ข่าว{extra}")
+        if show_all and direct:
+            click.echo(f"\n--- ดึงจากแหล่งเองได้ ({len(direct)}) ---")
+            for s, n in direct:
+                click.echo(f"{s.id}\t{s.source_type}\t{s.fetch_kind}\t{s.name}\t{n} ข่าว")
+
     @app.cli.command("create-admin")
     @click.argument("username")
     @click.argument("password")
