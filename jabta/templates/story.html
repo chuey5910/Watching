@@ -9,7 +9,7 @@
     {% if s.pin %}<span class="tag fill" style="background:var(--red)">ปักหมุด #{{ s.pin.position }}</span>{% endif %}
     {% if s.local_first %}<span class="tag" style="border:1px solid var(--gold);color:var(--gold)">สื่อท้องถิ่น/บุคคลรายงานก่อนสื่อหลัก</span>{% endif %}
   </div>
-  <h1>{{ s.title }}</h1>
+  <h1>{{ s.title|tw }}</h1>
   <div class="row wrap small mute">
     <span>{{ s.source_count }} แหล่ง · {{ arts|length }} รายงาน</span><span>·</span>
     <span>รายงานแรก {{ s.first_seen_at|fmt_time('%d/%m %H:%M') }} น.</span><span>·</span>
@@ -30,8 +30,8 @@
       <span style="font-weight:600">{{ a.source.name }} <span class="mute">· {{ SOURCE_TYPES[a.source.source_type] }}</span></span>
       <span class="mute">{{ a.published_at|fmt_time('%d/%m %H:%M') }}</span>
     </div>
-    <a href="{{ a.url }}" target="_blank" rel="noopener" style="font-size:16px;font-weight:600;line-height:1.4">{{ a.display_title }} ↗</a>
-    {% if a.summary %}<p class="small" style="margin:0;color:var(--ink2);line-height:1.55">{{ a.summary[:400] }}{% if a.summary|length > 400 %}…{% endif %}</p>{% endif %}
+    <a href="{{ a.url }}" target="_blank" rel="noopener" style="font-size:16px;font-weight:600;line-height:1.4">{{ a.display_title|tw }} ↗</a>
+    {% if a.summary %}<p class="small" style="margin:0;color:var(--ink2);line-height:1.55">{{ a.summary[:400]|tw }}{% if a.summary|length > 400 %}…{% endif %}</p>{% endif %}
     <div class="row wrap xs mute">
       {% for c in a.category_list %}<span class="cat-{{ c }}">{{ CATEGORIES[c].label }}</span>{% endfor %}
       {% if a.matched_keywords %}<span>· คำที่พบ: {{ a.matched_keywords.split(',')[:6]|join(', ') }}</span>{% endif %}

@@ -40,7 +40,7 @@
     <div class="kicker">ข่าวล่าสุดจากแหล่งนี้</div>
     <div class="col" style="gap:0">
       {% for a in arts %}
-      <div class="item"><a class="title" href="{{ a.url }}" target="_blank" rel="noopener">{{ a.display_title }}</a>
+      <div class="item"><a class="title" href="{{ a.url }}" target="_blank" rel="noopener">{{ a.display_title|tw }}</a>
         <span class="meta">{{ a.published_at|fmt_time('%d/%m %H:%M') }}{% for c in a.category_list %} · <span class="cat-{{ c }}">{{ CATEGORIES[c].label }}</span>{% endfor %} · {{ LEVELS[a.level].label }}</span></div>
       {% else %}<div class="note">ยังไม่มีข่าวที่เข้าหมวด</div>{% endfor %}
     </div>

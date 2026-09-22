@@ -18,7 +18,7 @@
         <svg width="20" height="20" viewBox="0 0 24 24" fill="#5A6072" aria-hidden="true"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>
         <span class="n">{{ loop.index }}</span>
         <span class="col" style="gap:4px;min-width:0">
-          <a href="{{ url_for('main.story', story_id=p.story_id) }}" style="font-size:16px;font-weight:600;line-height:1.4">{{ p.story.title }}</a>
+          <a href="{{ url_for('main.story', story_id=p.story_id) }}" style="font-size:16px;font-weight:600;line-height:1.4">{{ p.story.title|tw }}</a>
           <span class="meta">{{ CATEGORIES.get(p.story.category, {}).get('label', 'ทั่วไป') }} · {{ p.story.source_count }} แหล่ง · {% if p.rule %}ปักอัตโนมัติตามกฎ “{{ p.rule.name|truncate(40) }}”{% elif p.pinned_by %}ปักโดย {{ p.pinned_by.display_name }}{% else %}ปักโดยระบบ{% endif %} {{ p.pinned_at|fmt_time('%d/%m %H:%M') }}</span>
         </span>
         <label class="field">ปลดหมุดอัตโนมัติ
@@ -41,7 +41,7 @@
         {% for s in suggestions %}
         <div class="row between card" style="flex-direction:row;align-items:center">
           <span class="col" style="gap:3px;min-width:0">
-            <a href="{{ url_for('main.story', story_id=s.id) }}" style="font-size:14px;font-weight:500;line-height:1.4">{{ s.title }}</a>
+            <a href="{{ url_for('main.story', story_id=s.id) }}" style="font-size:14px;font-weight:500;line-height:1.4">{{ s.title|tw }}</a>
             <span class="meta">{% if s.category %}<span class="cat-{{ s.category }}">{{ CATEGORIES[s.category].label }}</span> · {% endif %}{{ s.source_count }} แหล่ง{% if s.social_count %} + {{ s.social_count }} บัญชี{% endif %} · {{ LEVELS[s.level].label }} · {{ s.last_seen_at|ago }}</span>
           </span>
           <button class="btn sm" data-pin="{{ s.id }}" style="flex-shrink:0">ปักหมุด</button>

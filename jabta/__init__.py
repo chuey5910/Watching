@@ -101,7 +101,8 @@ def create_app(config_object=Config) -> Flask:
         l = to_local(dt or datetime.utcnow())
         return f"{THAI_DAYS[l.weekday()]} {l.day} {THAI_MONTHS[l.month - 1]} {l.year + 543}"
 
-    app.jinja_env.filters.update(fmt_time=fmt_time, ago=ago, thai_date=thai_date)
+    from .thaiwrap import thai_zwsp
+    app.jinja_env.filters.update(fmt_time=fmt_time, ago=ago, thai_date=thai_date, tw=thai_zwsp)
     app.jinja_env.globals.update(CATEGORIES=CATEGORIES, LEVELS=LEVELS, SOURCE_TYPES=SOURCE_TYPES,
                                  FETCH_KINDS=FETCH_KINDS, USER_STATUS=USER_STATUS, thai_date=thai_date)
 

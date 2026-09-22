@@ -18,8 +18,8 @@
   <div class="label"><span class="dot" style="background:var(--bg)"></span>ด่วน</div>
   <div class="items">
     <div class="ticker-track">
-      {% for a in ticker %}<span><a href="{{ a.url }}" target="_blank" rel="noopener">{{ a.published_at|fmt_time }} · {{ a.display_title }} — {{ a.source.name }}</a></span><span class="sep">|</span>{% endfor %}
-      {% for a in ticker %}<span><a href="{{ a.url }}" target="_blank" rel="noopener">{{ a.published_at|fmt_time }} · {{ a.display_title }} — {{ a.source.name }}</a></span><span class="sep">|</span>{% endfor %}
+      {% for a in ticker %}<span><a href="{{ a.url }}" target="_blank" rel="noopener">{{ a.published_at|fmt_time }} · {{ a.display_title|tw }} — {{ a.source.name }}</a></span><span class="sep">|</span>{% endfor %}
+      {% for a in ticker %}<span><a href="{{ a.url }}" target="_blank" rel="noopener">{{ a.published_at|fmt_time }} · {{ a.display_title|tw }} — {{ a.source.name }}</a></span><span class="sep">|</span>{% endfor %}
     </div>
   </div>
 </div>
@@ -41,7 +41,7 @@
         <a class="pin {{ 'first' if loop.first }}" href="{{ url_for('main.story', story_id=p.story_id) }}">
           <span class="n">{{ p.position }}</span>
           <span class="col" style="gap:5px">
-            <span class="title">{{ p.story.title }}</span>
+            <span class="title">{{ p.story.title|tw }}</span>
             <span class="meta">{{ CATEGORIES.get(p.story.category, {}).get('label', 'ทั่วไป') }} · {{ p.story.source_count }} แหล่ง{% if p.rule %} · กฎอัตโนมัติ{% endif %}</span>
           </span>
         </a>
@@ -88,10 +88,10 @@
           {% if pins and pins[0].story_id == hero.id %}<span class="tag fill" style="background:var(--red)">ปักหมุด #1</span>{% else %}<span class="tag" style="border:1px solid var(--line2);color:var(--mute)">เด่นที่สุดตอนนี้</span>{% endif %}
           {% if hero.category %}<span class="tag bcat-{{ hero.category }} cat-{{ hero.category }}" style="border:1px solid">{{ CATEGORIES[hero.category].label }}</span>{% endif %}
           <span class="tag lvl-{{ hero.level }}" style="border:1px solid">{{ LEVELS[hero.level].label }}</span>
-          <span class="small mute">{{ hero_first.region if hero_first else '' }} · เริ่ม {{ hero.first_seen_at|fmt_time }} น. · ล่าสุด {{ hero.last_seen_at|ago }}{% if hero.local_first %} · <span style="color:var(--gold)">สื่อท้องถิ่น/บุคคลรายงานก่อน</span>{% endif %}</span>
+          <span class="small mute">{% if hero_first and hero_first.region %}{{ hero_first.region }} · {% endif %}เริ่ม {{ hero.first_seen_at|fmt_time }} น. · ล่าสุด {{ hero.last_seen_at|ago }}{% if hero.local_first %} · <span style="color:var(--gold)">สื่อท้องถิ่น/บุคคลรายงานก่อน</span>{% endif %}</span>
         </div>
-        <h1><a href="{{ url_for('main.story', story_id=hero.id) }}">{{ hero.title }}</a></h1>
-        {% if hero_articles and hero_articles[0].summary %}<p>{{ hero_articles[0].summary[:420] }}{% if hero_articles[0].summary|length > 420 %}…{% endif %}</p>{% endif %}
+        <h1><a href="{{ url_for('main.story', story_id=hero.id) }}">{{ hero.title|tw }}</a></h1>
+        {% if hero_articles and hero_articles[0].summary %}<p>{{ hero_articles[0].summary[:420]|tw }}{% if hero_articles[0].summary|length > 420 %}…{% endif %}</p>{% endif %}
         <div class="row wrap small mute" style="gap:8px 14px">
           <span style="font-weight:600;color:var(--ink)">รายงานตรงกัน {{ hero.source_count }} แหล่ง:</span>
           {% for s in hero.source_names(6) %}<span>{{ srcname(s) }}</span>{% if not loop.last %}<span>·</span>{% endif %}{% endfor %}
@@ -107,7 +107,7 @@
         <div class="timeline">
           <div class="kicker" style="margin-bottom:4px">ไทม์ไลน์ ({{ hero_articles|length }} รายงาน)</div>
           {% for a in hero_articles[:6] %}
-            <div class="t {{ 'first' if loop.first }}"><b>{{ a.published_at|fmt_time }}</b><span><a href="{{ a.url }}" target="_blank" rel="noopener">{{ a.source.name }}</a>: {{ a.display_title[:70] }}{% if a.display_title|length > 70 %}…{% endif %}</span></div>
+            <div class="t {{ 'first' if loop.first }}"><b>{{ a.published_at|fmt_time }}</b><span><a href="{{ a.url }}" target="_blank" rel="noopener">{{ a.source.name }}</a>: {{ a.display_title[:70]|tw }}{% if a.display_title|length > 70 %}…{% endif %}</span></div>
           {% endfor %}
         </div>
       </div>
@@ -143,13 +143,13 @@
             {% if loop.first and not cat %}
             <div class="card {{ 'hot' if s.level == 'essential' }}">
               <span class="meta cat-{{ k }}" style="font-weight:600">{{ LEVELS[s.level].label }}{% if s.local_first %} · <span style="color:var(--gold)">เฝ้าระวัง: ท้องถิ่นรายงานก่อน</span>{% endif %} · {{ s.last_seen_at|ago }}</span>
-              <a class="title" href="{{ url_for('main.story', story_id=s.id) }}">{{ s.title }}</a>
+              <a class="title" href="{{ url_for('main.story', story_id=s.id) }}">{{ s.title|tw }}</a>
               <span class="meta">{% for src in s.source_names(3) %}{{ srcname(src) }}{% if not loop.last %} · {% endif %}{% endfor %}{% if s.source_count > 3 %} · +{{ s.source_count - 3 }}{% endif %}</span>
               <button class="pinbtn" data-pin="{{ s.id }}">📌 ปักหมุด</button>
             </div>
             {% else %}
             <div class="item">
-              <a class="title" href="{{ url_for('main.story', story_id=s.id) }}">{{ s.title }}</a>
+              <a class="title" href="{{ url_for('main.story', story_id=s.id) }}">{{ s.title|tw }}</a>
               <span class="meta">{% for src in s.source_names(2) %}{{ srcname(src) }}{% if not loop.last %} · {% endif %}{% endfor %}{% if s.source_count > 2 %} · +{{ s.source_count - 2 }} แหล่ง{% endif %} · {{ s.last_seen_at|ago }}{% if s.level in ('essential','important') %} · <span class="lvl-{{ s.level }}">{{ LEVELS[s.level].label }}</span>{% endif %}</span>
               <button class="pinbtn" data-pin="{{ s.id }}">📌 ปักหมุด</button>
             </div>
@@ -170,7 +170,7 @@
       {% for lvl, meta in LEVELS.items() %}
       <div class="lv" style="border-color:{{ meta.color }}">
         <span class="k" style="color:{{ meta.color }}">{{ meta.label }}</span>
-        {% if must[lvl] %}<a href="{{ url_for('main.story', story_id=must[lvl].id) }}">{{ must[lvl].title }}</a><span class="small mute">{{ must[lvl].source_count }} แหล่ง · {{ must[lvl].last_seen_at|ago }}</span>{% else %}<span class="small mute">—</span>{% endif %}
+        {% if must[lvl] %}<a href="{{ url_for('main.story', story_id=must[lvl].id) }}">{{ must[lvl].title|tw }}</a><span class="small mute">{{ must[lvl].source_count }} แหล่ง · {{ must[lvl].last_seen_at|ago }}</span>{% else %}<span class="small mute">—</span>{% endif %}
       </div>
       {% endfor %}
     </section>
@@ -195,7 +195,7 @@
             <span class="xs mute">{{ (a.source.platform or a.source.fetch_kind)|capitalize }} · {{ a.published_at|ago }}{% if a.source.group_name %} · กลุ่ม: {{ a.source.group_name }}{% endif %}</span>
           </span>
         </div>
-        <p><a href="{{ a.url }}" target="_blank" rel="noopener">{{ (a.summary or a.display_title)[:220] }}</a></p>
+        <p><a href="{{ a.url }}" target="_blank" rel="noopener">{{ (a.summary or a.display_title)[:220]|tw }}</a></p>
         {% if a.is_alert %}<span class="alert">● เข้าเงื่อนไขแจ้งเตือน{% if a.matched_keywords %}: {{ a.matched_keywords.split(',')[:3]|join(', ') }}{% endif %}</span>{% endif %}
       </div>
       {% else %}
