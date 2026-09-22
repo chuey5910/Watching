@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- macOS launchd (Mac mini): คัดลอกไป ~/Library/LaunchAgents/ แก้ path แล้ว launchctl load -w ~/Library/LaunchAgents/com.jabta.board.plist -->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>com.jabta.board</string>
+  <key>ProgramArguments</key><array><string>/Users/USERNAME/jabta/scripts/run.sh</string></array>
+  <key>WorkingDirectory</key><string>/Users/USERNAME/jabta</string>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>StandardOutPath</key><string>/Users/USERNAME/jabta/logs/launchd.out.log</string>
+  <key>StandardErrorPath</key><string>/Users/USERNAME/jabta/logs/launchd.err.log</string>
+</dict></plist>

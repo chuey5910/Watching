@@ -1,0 +1,17 @@
+# systemd unit (Linux) — คัดลอกไป /etc/systemd/system/jabta.service แล้ว: sudo systemctl enable --now jabta
+[Unit]
+Description=Jabta news monitoring board
+After=network-online.target tailscaled.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=%i
+WorkingDirectory=/opt/jabta
+EnvironmentFile=/opt/jabta/.env
+ExecStart=/opt/jabta/.venv/bin/gunicorn -c gunicorn.conf.py app:app
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
