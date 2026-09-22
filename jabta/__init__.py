@@ -406,6 +406,61 @@ def create_app(config_object=Config) -> Flask:
         click.echo("บัญชี Facebook ติดตามผ่านคำค้น Google News (ได้ข่าวที่กล่าวถึงชื่อนั้น "
                    "ไม่ใช่โพสต์ของเขา) เพราะ Facebook ไม่มี RSS และ route ของ RSSHub ถูกถอดออกแล้ว")
 
+    @app.cli.command("classify-audit")
+    @click.option("--samples", default=6, help="จำนวนตัวอย่างหัวข้อที่แสดงต่อหมวด")
+    @click.option("--top", default=30, help="จำนวนคำที่จุดชนวนบ่อยที่สุดที่แสดง")
+    def classify_audit_cmd(samples, top):
+        """วัดว่าตัวจัดหมวดทำงานยังไงกับข่าวจริงที่เก็บไว้แล้ว
+
+        ใช้หาคำที่กว้างเกินไปจนดูดข่าวผิดหมวดเข้ามา โดยดูว่าคำไหนจุดชนวนบ่อย
+        และข่าวที่เข้าหมวดเพราะคำเดียวมีหน้าตาแบบไหน
+        """
+        from collections import Counter
+        from sqlalchemy import func
+        from .models import Article, CATEGORIES, LEVELS
+
+        total = Article.query.count()
+        if not total:
+            click.echo("ยังไม่มีข่าวในระบบ — รัน flask fetch ก่อน")
+            return
+        click.echo(f"ข่าวทั้งหมด {total} ชิ้น\n")
+
+        click.echo("--- หมวด x ระดับ ---")
+        grid = {(c, l): n for c, l, n in
+                db.session.query(Article.category, Article.level, func.count(Article.id))
+                          .group_by(Article.category, Article.level).all()}
+        lv = list(LEVELS)
+        click.echo("  " + "หมวด".ljust(14) + "".join(x.ljust(12) for x in lv) + "รวม")
+        for cat in list(CATEGORIES) + [None]:
+            tot = sum(grid.get((cat, l), 0) for l in lv)
+            if not tot:
+                continue
+            click.echo("  " + str(cat or "(ไม่เข้าหมวด)").ljust(14)
+                       + "".join(str(grid.get((cat, l), 0)).ljust(12) for l in lv) + str(tot))
+
+        click.echo(f"\n--- คำที่จุดชนวนบ่อยที่สุด {top} อันดับ ---")
+        cnt = Counter()
+        solo = Counter()          # ข่าวที่เข้าหมวดเพราะคำเดียว = ผู้ต้องสงสัยหลัก
+        for (mk,) in db.session.query(Article.matched_keywords).filter(Article.matched_keywords != None):
+            ws = [w for w in (mk or "").split(",") if w.strip()]
+            cnt.update(ws)
+            if len(ws) == 1:
+                solo.update(ws)
+        for w, n in cnt.most_common(top):
+            s1 = solo.get(w, 0)
+            flag = "  <-- เข้าหมวดเพราะคำนี้คำเดียว " + str(s1) + " ชิ้น" if s1 >= 5 else ""
+            click.echo(f"  {n:5}  {w}{flag}")
+
+        click.echo(f"\n--- ตัวอย่างหัวข้อต่อหมวด (อย่างละ {samples}) ---")
+        for cat in CATEGORIES:
+            arts = Article.query.filter_by(category=cat).order_by(func.random()).limit(samples).all()
+            if not arts:
+                continue
+            click.echo(f"\n  [{cat}] {CATEGORIES[cat].get('label', cat) if isinstance(CATEGORIES[cat], dict) else CATEGORIES[cat]}")
+            for a in arts:
+                click.echo(f"    {a.level:12} {(a.title or '')[:66]}")
+                click.echo(f"    {'':12} คำที่เจอ: {(a.matched_keywords or '-')[:80]}")
+
     @app.cli.command("create-admin")
     @click.argument("username")
     @click.argument("password")
