@@ -1,0 +1,22 @@
+# ความลับและข้อมูลเฉพาะเครื่อง
+.env
+.env.bak
+
+# ฐานข้อมูลและ log (สร้างตอนรัน)
+data/
+logs/
+*.sqlite3
+*.db
+
+# Python
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# ระบบปฏิบัติการ / editor
+.DS_Store
+.idea/
+.vscode/
