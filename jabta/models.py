@@ -151,7 +151,9 @@ class Story(db.Model):
     last_seen_at = db.Column(db.DateTime, default=now, index=True)
     source_count = db.Column(db.Integer, default=1)
     social_count = db.Column(db.Integer, default=0)
-    local_first = db.Column(db.Boolean, default=False)  # สื่อท้องถิ่น/บุคคลรายงานก่อนสื่อหลัก
+    local_first = db.Column(db.Boolean, default=False)
+    # คำเฝ้าระวังที่เจอในข่าวของกลุ่มนี้ คั่น , — ใช้ทั้งจัดอันดับและแสดงเหตุผลบนกระดาน
+    watch_hits = db.Column(db.String(400))  # สื่อท้องถิ่น/บุคคลรายงานก่อนสื่อหลัก
     score = db.Column(db.Float, default=0.0)
 
     articles = db.relationship("Article", backref="story", lazy="dynamic")

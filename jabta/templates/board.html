@@ -101,7 +101,7 @@
     <section class="hero">
       <div class="col" style="gap:16px">
         <div class="row wrap">
-          {% if pins and pins[0].story_id == hero.id %}<span class="tag fill" style="background:var(--red)">ปักหมุด #1</span>{% else %}<span class="tag" style="border:1px solid var(--line2);color:var(--mute)">เด่นที่สุดตอนนี้</span>{% endif %}
+          {% if pins and pins[0].story_id == hero.id %}<span class="tag fill" style="background:var(--red)">ปักหมุด #1</span>{% else %}<span class="tag" style="border:1px solid var(--line2);color:var(--mute)">ต้องรู้ตอนนี้</span>{% endif %}{% if hero.watch_hits %}<span class="tag fill" style="background:var(--red)">คำเฝ้าระวัง: {{ hero.watch_hits }}</span>{% endif %}
           {% if hero.category %}<span class="tag bcat-{{ hero.category }} cat-{{ hero.category }}" style="border:1px solid">{{ CATEGORIES[hero.category].label }}</span>{% endif %}
           <span class="tag lvl-{{ hero.level }}" style="border:1px solid">{{ LEVELS[hero.level].label }}</span>
           <span class="small mute">{% if hero_first and hero_first.region %}{{ hero_first.region }} · {% endif %}เริ่ม {{ hero.first_seen_at|fmt_time }} น. · ล่าสุด {{ hero.last_seen_at|ago }}{% if hero.local_first %} · <span style="color:var(--gold)">สื่อท้องถิ่น/บุคคลรายงานก่อน</span>{% endif %}</span>
@@ -158,7 +158,7 @@
           {% for s in stories %}
             {% if loop.first and not cat %}
             <div class="card {{ 'hot' if s.level == 'essential' }}">
-              <span class="meta cat-{{ k }}" style="font-weight:600">{{ LEVELS[s.level].label }}{% if s.local_first %} · <span style="color:var(--gold)">เฝ้าระวัง: ท้องถิ่นรายงานก่อน</span>{% endif %} · {{ s.last_seen_at|ago }}</span>
+              <span class="meta cat-{{ k }}" style="font-weight:600">{% if s.watch_hits %}<span style="color:var(--red)">● {{ s.watch_hits }}</span> · {% endif %}{{ LEVELS[s.level].label }}{% if s.local_first %} · <span style="color:var(--gold)">ท้องถิ่นรายงานก่อน</span>{% endif %} · {{ s.last_seen_at|ago }}</span>
               <a class="title" href="{{ url_for('main.story', story_id=s.id) }}">{{ s.title|tw }}</a>
               <span class="meta">{% for src in s.source_names(3) %}{{ srcname(src) }}{% if not loop.last %} · {% endif %}{% endfor %}{% if s.source_count > 3 %} · +{{ s.source_count - 3 }}{% endif %}</span>
               <button class="pinbtn" data-pin="{{ s.id }}">📌 ปักหมุด</button>

@@ -38,7 +38,8 @@ def setup_logging(app: Flask):
 
 # โปรเจกต์นี้ไม่มี migration tool — create_all() สร้างตารางใหม่ได้แต่ไม่เพิ่ม
 # คอลัมน์ให้ตารางที่มีอยู่แล้ว จึงต้องเติมเองแบบ idempotent ตอนสตาร์ท
-NEW_COLUMNS = [("articles", "watch_hits", "VARCHAR(400)")]
+NEW_COLUMNS = [("articles", "watch_hits", "VARCHAR(400)"),
+               ("stories", "watch_hits", "VARCHAR(400)")]
 
 
 def _add_missing_columns():

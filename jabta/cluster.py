@@ -41,6 +41,13 @@ def containment(a: str, b: str) -> float:
     return len(small & big) / float(len(small))
 
 
+# น้ำหนักการจัดอันดับ — ปรับตรงนี้เพื่อเปลี่ยนว่าอะไรควรขึ้นบนสุด
+W_WATCH = 10.0        # ตรงคำเฝ้าระวัง — สูงสุด เพราะผู้ใช้สั่งเองโดยตรง
+W_SOCIAL = 6.0        # มีบัญชีบุคคล/เพจที่เฝ้าติดตามรายงาน
+W_LOCAL_FIRST = 4.0   # ท้องถิ่นหรือบุคคลรายงานก่อนสื่อหลัก = สัญญาณเตือนล่วงหน้า
+W_LEVEL = 2.0         # ระดับความสำคัญ (จำเป็น 4 ... น่าสนใจ 1)
+DECAY_PER_HOUR = 0.5  # ความสดสำคัญมากกับงานเฝ้าระวัง จึงลดเร็วกว่าเดิมสามเท่า
+
 SIM_THRESHOLD = 0.38
 CONTAIN_THRESHOLD = 0.72
 WINDOW_HOURS = 48
@@ -103,6 +110,22 @@ def refresh_story(story: Story):
         else:
             fm = min(mains, key=lambda a: a.published_at or a.fetched_at)
             story.local_first = ((fm.published_at or fm.fetched_at) - (first.published_at or first.fetched_at)) >= timedelta(hours=2)
-    # คะแนนจัดอันดับ: จำนวนแหล่ง + ระดับ + ความสด
+    # คำเฝ้าระวังที่เจอในกลุ่มนี้ (รวมจากทุกข่าวในกลุ่ม ไม่นับซ้ำ)
+    hits = sorted({w for a in arts for w in (a.watch_hits or "").split(",") if w.strip()})
+    story.watch_hits = ",".join(hits)[:400] or None
+
+    # คะแนนจัดอันดับตามตรรกะงานเฝ้าระวัง ไม่ใช่ตรรกะหนังสือพิมพ์
+    #
+    # เว็บนี้ไม่ได้ทำหน้าที่นำเสนอข่าว แต่เฝ้าระวังความเคลื่อนไหวของบุคคล/กลุ่ม
+    # ที่ผู้ใช้ต้องการรู้ "จำนวนสำนักข่าวที่รายงาน" จึงไม่มีน้ำหนักในสูตรนี้เลย
+    # เพราะมันวัดความดังของข่าว ไม่ได้วัดความสำคัญต่อการเฝ้าระวัง
+    # ข่าวที่สื่อใหญ่สี่เจ้าลงพร้อมกันคือข่าวที่ทุกคนรู้แล้ว ไม่ใช่สิ่งที่ต้องเตือน
+    # (ยังนับ source_count เก็บไว้แสดงผลว่า "รายงานตรงกันกี่แหล่ง" ตามเดิม)
     age_h = max(0.0, (now() - story.last_seen_at).total_seconds() / 3600.0)
-    story.score = story.source_count * 2.0 + story.social_count * 1.5 + LEVEL_RANK.get(story.level, 1) * 1.5 - age_h * 0.15
+    story.score = (
+        (W_WATCH if hits else 0.0)                     # ตรงคำที่ผู้ใช้สั่งเฝ้าระวังเอง
+        + (W_SOCIAL if story.social_count else 0.0)    # มาจากบัญชีบุคคล/เพจที่เฝ้าติดตาม
+        + (W_LOCAL_FIRST if story.local_first else 0.0)  # ท้องถิ่นรายงานก่อนสื่อหลัก = เตือนล่วงหน้า
+        + LEVEL_RANK.get(story.level, 1) * W_LEVEL
+        - age_h * DECAY_PER_HOUR
+    )
