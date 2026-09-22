@@ -178,6 +178,83 @@ def create_app(config_object=Config) -> Flask:
             for s, n in direct:
                 click.echo(f"{s.id}\t{s.source_type}\t{s.fetch_kind}\t{s.name}\t{n} ข่าว")
 
+    @app.cli.command("probe-feeds")
+    @click.option("--ids", default="", help="ระบุ id แหล่งข่าวคั่นด้วย , (ว่าง = เลือกเฉพาะแหล่งที่มีปัญหาให้อัตโนมัติ)")
+    def probe_feeds_cmd(ids):
+        """ลองหา URL ของ RSS ที่ใช้ได้จริงให้แหล่งที่ดึงไม่ได้
+
+        ต้องรันบนเครื่องที่ออกเน็ตได้ ไล่ลองสามทาง: URL ที่ตั้งไว้เดิม,
+        <link rel=alternate> ในหน้าแรก, และ path ยอดนิยมอีกชุดใหญ่
+        แล้วรายงานว่าอันไหนคืนรายการข่าวได้จริงกี่รายการ
+        """
+        from urllib.parse import urljoin
+        from bs4 import BeautifulSoup
+        from sqlalchemy import func
+        from .models import Source, Article
+        from .fetcher import _session, parse_feed
+
+        PATHS = ["/feed", "/feed/", "/rss", "/rss/", "/rss.xml", "/feed.xml", "/atom.xml",
+                 "/index.xml", "/?feed=rss2", "/rss.php", "/rss/news.xml", "/rss/news",
+                 "/rss/feed/news", "/rss/latest.xml", "/rss/all.xml", "/rss/home.rss",
+                 "/feed/rss", "/rss/feed", "/en/feed", "/en/feed/", "/news/feed",
+                 "/rssfeed", "/rss/index.xml", "/api/rss", "/feeds/all.rss"]
+
+        if ids.strip():
+            targets = Source.query.filter(Source.id.in_([int(x) for x in ids.split(",") if x.strip()])).all()
+        else:
+            counts = dict(db.session.query(Article.source_id, func.count(Article.id))
+                          .group_by(Article.source_id).all())
+            targets = [s for s in Source.query.order_by(Source.id).all()
+                       if s.fetch_kind == "rss"
+                       and (counts.get(s.id, 0) == 0
+                            or "news.google.com" in (s.resolved_feed_url or ""))]
+        click.echo(f"สำรวจ {len(targets)} แหล่ง\n")
+
+        sess = _session()
+
+        def try_url(url):
+            """คืนจำนวนรายการที่ parse ได้ หรือข้อความบอกว่าพังยังไง"""
+            try:
+                r = sess.get(url, timeout=15)
+                if r.status_code != 200:
+                    return None, f"HTTP {r.status_code}"
+                n = len(parse_feed(r.content, url))
+                return (n, "ok") if n else (0, "ไม่มีรายการ")
+            except Exception as ex:
+                return None, type(ex).__name__
+
+        for src in targets:
+            click.echo(f"=== [{src.id}] {src.name}  ({src.homepage or '-'})")
+            seen, good = set(), []
+            cands = []
+            if src.feed_url:
+                cands.append(("เดิม", src.feed_url))
+            if src.homepage:
+                try:
+                    r = sess.get(src.homepage, timeout=15)
+                    soup = BeautifulSoup(r.text, "lxml")
+                    for l in soup.find_all("link", rel=lambda v: v and "alternate" in v):
+                        t = (l.get("type") or "").lower()
+                        if ("rss" in t or "atom" in t or "xml" in t) and l.get("href"):
+                            cands.append(("ในหน้าแรก", urljoin(src.homepage, l["href"])))
+                except Exception as ex:
+                    click.echo(f"    เปิดหน้าแรกไม่ได้: {type(ex).__name__}")
+                cands += [("ลองเดา", urljoin(src.homepage, p)) for p in PATHS]
+            for label, url in cands:
+                if url in seen:
+                    continue
+                seen.add(url)
+                n, msg = try_url(url)
+                if n:
+                    good.append((n, url, label))
+                    click.echo(f"    ใช้ได้  {n:3} รายการ  [{label}] {url}")
+            if not good:
+                click.echo("    !! ไม่เจอฟีดที่ใช้ได้เลย — ควรเปลี่ยนเป็น fetch_kind=gnews หรือตัดทิ้ง")
+            else:
+                best = max(good)[1]
+                click.echo(f"    >> แนะนำ: {best}")
+            click.echo("")
+
     @app.cli.command("create-admin")
     @click.argument("username")
     @click.argument("password")
