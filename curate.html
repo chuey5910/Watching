@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block title %}จัดข่าวเด่น — จับตา.{% endblock %}
+{% block kicker %}จัดข่าวเด่นที่แสดงบนสุด{% endblock %}
+{% block body %}
+<div class="split rev">
+  <main>
+    <div class="row between wrap" style="align-items:flex-end">
+      <div class="col" style="gap:6px">
+        <h2 style="font-size:24px">ข่าวที่ปักหมุดอยู่ตอนนี้ <span class="mute" style="font-size:16px;font-family:var(--body)">({{ pins|length }}/{{ max_pins }})</span></h2>
+        <p class="small mute" style="margin:0;line-height:1.5">ลากเพื่อสลับลำดับ · อันดับ 1 ขึ้นเป็นข่าวใหญ่บนสุดของกระดาน · ตั้งเวลาปลดหมุดอัตโนมัติและระดับความจำเป็นได้ทีละข่าว</p>
+      </div>
+      <a class="btn danger" href="{{ url_for('main.board') }}">+ ปักหมุดจากกระดาน</a>
+    </div>
+
+    <div class="col" id="pinList" style="gap:10px">
+      {% for p in pins %}
+      <div class="pinrow {{ 'first' if loop.first }}" draggable="true" data-id="{{ p.id }}">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="#5A6072" aria-hidden="true"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>
+        <span class="n">{{ loop.index }}</span>
+        <span class="col" style="gap:4px;min-width:0">
+          <a href="{{ url_for('main.story', story_id=p.story_id) }}" style="font-size:16px;font-weight:600;line-height:1.4">{{ p.story.title }}</a>
+          <span class="meta">{{ CATEGORIES.get(p.story.category, {}).get('label', 'ทั่วไป') }} · {{ p.story.source_count }} แหล่ง · {% if p.rule %}ปักอัตโนมัติตามกฎ “{{ p.rule.name|truncate(40) }}”{% elif p.pinned_by %}ปักโดย {{ p.pinned_by.display_name }}{% else %}ปักโดยระบบ{% endif %} {{ p.pinned_at|fmt_time('%d/%m %H:%M') }}</span>
+        </span>
+        <label class="field">ปลดหมุดอัตโนมัติ
+          <select data-update="{{ p.id }}" name="auto_unpin">
+            {% for v, l in [('idle12h','เมื่อไม่มีข่าวใหม่ 12 ชม.'),('idle24h','เมื่อไม่มีข่าวใหม่ 24 ชม.'),('tomorrow06','พรุ่งนี้ 06:00'),('never','ไม่ปลดอัตโนมัติ')] %}<option value="{{ v }}" {{ 'selected' if p.auto_unpin == v }}>{{ l }}</option>{% endfor %}
+          </select>
+        </label>
+        <label class="field">ระดับ
+          <select data-update="{{ p.id }}" name="level">{% for k, m in LEVELS.items() %}<option value="{{ k }}" {{ 'selected' if p.level == k }}>{{ m.label }}</option>{% endfor %}</select>
+        </label>
+        <button class="iconbtn" data-pin="{{ p.story_id }}" data-unpin="1" aria-label="ปลดหมุด" title="ปลดหมุด"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      {% endfor %}
+      {% if pins|length < max_pins %}<div class="dropzone">ว่างอีก {{ max_pins - pins|length }} ตำแหน่ง · กด “ปักหมุด” บนการ์ดข่าวใดก็ได้ในกระดาน หรือเลือกจากรายการแนะนำด้านล่าง</div>{% endif %}
+    </div>
+
+    <div class="col" style="gap:12px;margin-top:8px">
+      <div class="kicker">ระบบแนะนำให้ปักหมุด (จากจำนวนแหล่ง ระดับ และความสด)</div>
+      <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px">
+        {% for s in suggestions %}
+        <div class="row between card" style="flex-direction:row;align-items:center">
+          <span class="col" style="gap:3px;min-width:0">
+            <a href="{{ url_for('main.story', story_id=s.id) }}" style="font-size:14px;font-weight:500;line-height:1.4">{{ s.title }}</a>
+            <span class="meta">{% if s.category %}<span class="cat-{{ s.category }}">{{ CATEGORIES[s.category].label }}</span> · {% endif %}{{ s.source_count }} แหล่ง{% if s.social_count %} + {{ s.social_count }} บัญชี{% endif %} · {{ LEVELS[s.level].label }} · {{ s.last_seen_at|ago }}</span>
+          </span>
+          <button class="btn sm" data-pin="{{ s.id }}" style="flex-shrink:0">ปักหมุด</button>
+        </div>
+        {% else %}<div class="note">ยังไม่มีข่าวใน 12 ชม. ที่ผ่านมา</div>{% endfor %}
+      </div>
+    </div>
+  </main>
+
+  <aside>
+    <div class="col" style="gap:6px">
+      <h2 style="font-size:21px">กฎปักหมุดอัตโนมัติ</h2>
+      <p class="small mute" style="margin:0;line-height:1.5">นอกจากเลือกเองแล้ว ตั้งเงื่อนไขให้ระบบดันข่าวขึ้นบนสุดทันทีที่เข้าเกณฑ์ (ตรวจทุกครั้งหลังดึงข่าว)</p>
+    </div>
+    <div class="col" style="gap:10px">
+      {% for r in rules %}
+      <label class="rule {{ 'off' if not r.enabled }}">
+        <input type="checkbox" data-rule="{{ r.id }}" {{ 'checked' if r.enabled }}>
+        <span class="grow">
+          <b>{{ r.name }}</b>
+          <span class="xs mute" style="display:block;margin-top:4px">
+            {% if r.category %}หมวด {{ CATEGORIES[r.category].label }} · {% endif %}≥{{ r.min_sources }} แหล่งใน {{ r.within_hours }} ชม.{% if r.keywords %} · คำ: {{ r.keywords }}{% endif %}{% if r.source_type %} · เฉพาะ {{ SOURCE_TYPES[r.source_type] }}{% endif %}{% if r.source_group %} กลุ่ม “{{ r.source_group }}”{% endif %}
+            → {{ {'pin':'ปักหมุด','pin_top':'ปักหมุดอันดับ 1','flag':'ติดระดับ','alert':'แจ้งเตือน'}[r.action] }} “{{ LEVELS[r.set_level].label }}”{% if r.notify_line %} + LINE{% endif %} · ทำงานแล้ว {{ r.hits or 0 }} ครั้ง
+          </span>
+        </span>
+        <form method="post" action="{{ url_for('main.rule_delete', rid=r.id) }}" onsubmit="return confirm('ลบกฎนี้?')"><button class="btn ghost sm" type="submit" aria-label="ลบกฎ">✕</button></form>
+      </label>
+      {% endfor %}
+    </div>
+
+    <details>
+      <summary class="btn" style="justify-content:center;border-style:dashed;color:var(--gold);cursor:pointer;list-style:none">+ เพิ่มกฎใหม่</summary>
+      <form method="post" action="{{ url_for('main.rule_add') }}" class="col" style="gap:10px;margin-top:12px">
+        <input type="text" name="name" placeholder="ชื่อกฎ เช่น น้ำท่วมภาคใต้หลายแหล่ง" required>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <label class="field">หมวด<select name="category"><option value="">ทุกหมวด</option>{% for k, c in CATEGORIES.items() %}<option value="{{ k }}">{{ c.label }}</option>{% endfor %}</select></label>
+          <label class="field">ประเภทแหล่ง<select name="source_type"><option value="">ทุกประเภท</option>{% for k, v in SOURCE_TYPES.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select></label>
+          <label class="field">อย่างน้อยกี่แหล่ง<input type="number" name="min_sources" value="3" min="1"></label>
+          <label class="field">ภายในกี่ชั่วโมง<input type="number" name="within_hours" value="1" min="1"></label>
+        </div>
+        <label class="field">พบคำใดคำหนึ่ง (คั่นด้วย ,)<input type="text" name="keywords" placeholder="นัดหมาย, รวมตัว, ประกาศเขต"></label>
+        <label class="field">เฉพาะกลุ่มบัญชี<input type="text" name="source_group" list="groups2" placeholder="เช่น ผู้นำการชุมนุม"><datalist id="groups2">{% for g in groups %}<option>{{ g }}</option>{% endfor %}</datalist></label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <label class="field">การกระทำ<select name="action"><option value="pin">ปักหมุด</option><option value="pin_top">ปักหมุดอันดับ 1</option><option value="flag">ติดระดับเท่านั้น</option></select></label>
+          <label class="field">ตั้งระดับ<select name="set_level">{% for k, m in LEVELS.items() %}<option value="{{ k }}" {{ 'selected' if k == 'important' }}>{{ m.label }}</option>{% endfor %}</select></label>
+        </div>
+        <label class="check"><input type="checkbox" name="notify_line" value="1"> แจ้งเตือนเข้า LINE ด้วย</label>
+        <button class="btn primary" type="submit">บันทึกกฎ</button>
+      </form>
+    </details>
+
+    <div class="hr"></div>
+    <div class="col">
+      <div class="kicker">คำสำคัญที่ติดตามพิเศษ</div>
+      <div class="row wrap" style="gap:8px">
+        {% for k in watch %}<form method="post" action="{{ url_for('main.keyword_delete', kid=k.id) }}" class="chip row" style="gap:6px;padding:4px 6px 4px 10px">{{ k.word }} <button class="btn ghost sm" style="min-height:22px;padding:0 6px" aria-label="ลบ">✕</button></form>{% endfor %}
+      </div>
+      <form method="post" action="{{ url_for('main.keyword_add') }}" class="row"><input type="text" name="word" placeholder="เพิ่มคำ เช่น เหมืองแร่" required><button class="btn">เพิ่ม</button></form>
+    </div>
+
+    <div class="hr"></div>
+    <div class="col" style="gap:8px;padding:16px;border-radius:6px;background:var(--cream);color:var(--bg)">
+      <div class="display" style="font-size:18px">สรุปเช้าส่งเข้า LINE</div>
+      <p class="small" style="margin:0;line-height:1.5;color:#3A3F4D">ทุกวัน {{ brief_time }} น. ระบบรวบรวมข่าวปักหมุด + “สมควรรู้วันนี้” ส่งเข้า LINE OA ของคุณโดยอัตโนมัติ</p>
+      <span class="small" style="font-weight:600;color:{{ '#3E8E5A' if line_on else '#B8551E' }}">{{ 'เชื่อมต่อแล้ว' if line_on else 'ยังไม่ได้ตั้งค่า LINE_CHANNEL_ACCESS_TOKEN / LINE_TO ใน .env' }}</span>
+    </div>
+  </aside>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+// ลากสลับลำดับหมุด
+const list=document.getElementById('pinList'); let dragEl=null;
+list.addEventListener('dragstart',e=>{dragEl=e.target.closest('.pinrow'); if(dragEl) dragEl.classList.add('dragging')});
+list.addEventListener('dragend',async()=>{ if(!dragEl) return; dragEl.classList.remove('dragging'); dragEl=null;
+  const ids=[...list.querySelectorAll('.pinrow')].map(r=>r.dataset.id);
+  const r=await postJSON('/pins/reorder',{ids}); if(r.ok) location.reload();});
+list.addEventListener('dragover',e=>{e.preventDefault(); const over=e.target.closest('.pinrow'); if(!over||!dragEl||over===dragEl) return;
+  const rect=over.getBoundingClientRect(); const after=(e.clientY-rect.top)>rect.height/2;
+  list.insertBefore(dragEl, after?over.nextSibling:over);});
+// เปลี่ยนระดับ/ปลดหมุดอัตโนมัติ
+document.querySelectorAll('select[data-update]').forEach(s=>s.addEventListener('change',async()=>{
+  const row=s.closest('.pinrow'); const data={};
+  row.querySelectorAll('select[data-update]').forEach(x=>data[x.name]=x.value);
+  await postForm(`/pins/${s.dataset.update}/update`,data);
+}));
+// เปิด/ปิดกฎ
+document.querySelectorAll('input[data-rule]').forEach(c=>c.addEventListener('change',async()=>{
+  const r=await postForm(`/rules/${c.dataset.rule}/toggle`,{}); c.closest('.rule').classList.toggle('off', !r.enabled);
+}));
+</script>
+{% endblock %}

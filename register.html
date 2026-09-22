@@ -1,0 +1,22 @@
+{% extends "auth/_layout.html" %}
+{% block title %}สมัครใช้งาน — จับตา.{% endblock %}
+{% block form %}
+<h1>{{ 'สร้างบัญชีผู้ดูแลระบบคนแรก' if first else 'สมัครใช้งาน' }}</h1>
+{% if first %}<div class="note ok">ยังไม่มีผู้ใช้ในระบบ — บัญชีนี้จะเป็น <b>ผู้ดูแลระบบ</b> และใช้งานได้ทันที บัญชีถัดไปทั้งหมดต้องรอให้คุณอนุมัติ</div>
+{% else %}<div class="note">หลังสมัคร บัญชีจะอยู่ในสถานะ <b>รออนุมัติ</b> จนกว่าผู้ดูแลระบบจะตรวจสอบ คุณจะยังเข้าดูกระดานไม่ได้จนกว่าจะได้รับอนุมัติ</div>{% endif %}
+{% if ts_login %}<div class="note xs">จะผูกบัญชีกับตัวตน Tailscale <b>{{ ts_login }}</b> ให้อัตโนมัติ</div>{% endif %}
+<form method="post" class="col" style="gap:14px">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+    <label class="field">ชื่อผู้ใช้ (a-z 0-9 _ . -)<input type="text" name="username" pattern="[a-zA-Z0-9_.\-]{3,32}" required autofocus value="{{ request.form.username or '' }}"></label>
+    <label class="field">ชื่อที่แสดง<input type="text" name="display_name" required value="{{ request.form.display_name or ts_name or '' }}"></label>
+  </div>
+  <label class="field">อีเมล / ช่องทางติดต่อ (ไม่บังคับ)<input type="text" name="email" value="{{ request.form.email or '' }}"></label>
+  <label class="field">หน่วยงาน / เหตุผลที่ขอใช้งาน (ผู้ดูแลจะเห็นตอนอนุมัติ)<textarea name="note" rows="2">{{ request.form.note or '' }}</textarea></label>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+    <label class="field">รหัสผ่าน (≥ 8 ตัว)<input type="password" name="password" minlength="8" autocomplete="new-password" required></label>
+    <label class="field">ยืนยันรหัสผ่าน<input type="password" name="password2" minlength="8" autocomplete="new-password" required></label>
+  </div>
+  <button class="btn primary" style="justify-content:center;padding:13px" type="submit">{{ 'สร้างบัญชีผู้ดูแล' if first else 'ส่งคำขอสมัคร' }}</button>
+</form>
+<p class="small mute" style="margin:0">มีบัญชีแล้ว? <a href="{{ url_for('auth.login') }}" style="color:var(--gold);font-weight:600">เข้าสู่ระบบ</a></p>
+{% endblock %}

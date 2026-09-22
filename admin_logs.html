@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Log — จับตา.{% endblock %}
+{% block kicker %}บันทึกการใช้งานและการดึงข่าว{% endblock %}
+{% block body %}
+<div class="page">
+  <div class="row wrap" style="gap:12px">
+    <div class="stat grow"><span class="kicker">ล็อกอินสำเร็จ 24 ชม.</span><b>{{ stats.logins_24h }}</b></div>
+    <div class="stat grow"><span class="kicker">ล็อกอินล้มเหลว / ถูกบล็อก 24 ชม.</span><b style="color:{{ 'var(--red)' if stats.fails_24h else 'inherit' }}">{{ stats.fails_24h }}</b></div>
+    <div class="stat grow"><span class="kicker">ดึงข่าวผิดพลาด 24 ชม.</span><b>{{ stats.fetch_err_24h }}</b></div>
+    <div class="stat grow"><span class="kicker">ไฟล์ log บนเครื่อง</span><span class="xs mute" style="word-break:break-all">{{ log_dir }}/app.log · audit.log · access.log</span></div>
+  </div>
+  <form method="get" class="row wrap">
+    <a class="pill {{ 'on' if kind == 'audit' }}" href="{{ url_for('main.admin_logs', kind='audit') }}">การใช้งาน (audit)</a>
+    <a class="pill {{ 'on' if kind == 'fetch' }}" href="{{ url_for('main.admin_logs', kind='fetch') }}">การดึงข่าว</a>
+    <input type="hidden" name="kind" value="{{ kind }}">
+    <input type="search" name="q" value="{{ q }}" placeholder="ค้นหา ผู้ใช้ / IP / รายละเอียด" style="width:280px">
+    <select name="action" style="width:auto"><option value="">ทุกเหตุการณ์</option>{% for a in actions %}<option value="{{ a }}" {{ 'selected' if action == a }}>{{ a }}</option>{% endfor %}</select>
+    <button class="btn">กรอง</button>
+  </form>
+  {% if kind == 'fetch' %}
+    {% set cols = "140px minmax(0,1.5fr) 90px 70px 70px 80px minmax(0,2fr)" %}
+    <div class="thead" style="grid-template-columns:{{ cols }}"><span>เวลา</span><span>แหล่ง</span><span>สถานะ</span><span>ใหม่</span><span>เก็บ</span><span>เวลา</span><span>ข้อความ</span></div>
+    <div class="table">
+      {% for l in rows %}
+      <div class="trow" style="grid-template-columns:{{ cols }};padding:10px 16px">
+        <span class="small mute">{{ l.at|fmt_time('%d/%m %H:%M:%S') }}</span><span class="small">{{ l.source.name if l.source else '—' }}</span>
+        <span class="small status-{{ l.status }}">{{ l.status }}</span><span class="small">{{ l.new_items }}</span><span class="small">{{ l.kept_items }}</span><span class="xs mute">{{ l.duration_ms }} ms</span>
+        <span class="xs mute" style="word-break:break-all">{{ l.message }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    {% set cols = "140px 150px 130px 120px minmax(0,2fr) 130px" %}
+    <div class="thead" style="grid-template-columns:{{ cols }}"><span>เวลา</span><span>เหตุการณ์</span><span>ผู้ใช้</span><span>IP</span><span>เป้าหมาย / รายละเอียด</span><span>Tailscale</span></div>
+    <div class="table">
+      {% for l in rows %}
+      <div class="trow" style="grid-template-columns:{{ cols }};padding:10px 16px;{{ 'border-left:3px solid var(--red)' if not l.ok }}">
+        <span class="small mute">{{ l.at|fmt_time('%d/%m %H:%M:%S') }}</span>
+        <span class="small" style="font-weight:600;{{ 'color:var(--red)' if not l.ok }}">{{ l.action }}</span>
+        <span class="small">{{ l.username or '—' }}</span>
+        <span class="xs mute">{{ l.ip or '—' }}</span>
+        <span class="xs" style="word-break:break-all"><span style="color:var(--ink2)">{{ l.target }}</span> <span class="mute">{{ l.detail or '' }}</span></span>
+        <span class="xs mute" style="word-break:break-all">{{ l.tailscale_login or '—' }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+  <div class="row">
+    {% if page > 1 %}<a class="btn sm" href="{{ url_for('main.admin_logs', kind=kind, q=q, action=action, page=page-1) }}">← ก่อนหน้า</a>{% endif %}
+    <span class="small mute">หน้า {{ page }}</span>
+    {% if rows|length == 100 %}<a class="btn sm" href="{{ url_for('main.admin_logs', kind=kind, q=q, action=action, page=page+1) }}">ถัดไป →</a>{% endif %}
+  </div>
+</div>
+{% endblock %}

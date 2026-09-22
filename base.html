@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}จับตา.{% endblock %}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%230F1116'/><circle cx='16' cy='16' r='7' fill='%23E4572E'/></svg>">
+</head>
+<body>
+{% block header %}
+<header class="masthead">
+  <div class="row" style="gap:22px;align-items:flex-end">
+    <a class="brand {% block brandsize %}sm{% endblock %}" href="{{ url_for('main.board') }}">จับตา<span>.</span></a>
+    <div class="col" style="gap:2px;padding-bottom:4px">
+      <div class="kicker">{% block kicker %}กระดานข่าวเฝ้าระวังสถานการณ์{% endblock %}</div>
+      <div class="small mute">{% block subline %}{{ thai_date() }}{% endblock %}</div>
+    </div>
+  </div>
+  <nav>
+    {% set ep = request.endpoint %}
+    <a class="pill {{ 'on' if ep == 'main.board' }}" href="{{ url_for('main.board') }}">กระดาน</a>
+    <a class="pill {{ 'on' if ep in ('main.sources','main.source_edit') }}" href="{{ url_for('main.sources') }}">แหล่งข่าว</a>
+    <a class="pill {{ 'on' if ep == 'main.sources' and request.args.get('type') == 'social' }}" href="{{ url_for('main.sources', type='social') }}">เฝ้าติดตามบุคคล</a>
+    <a class="pill {{ 'on' if ep == 'main.curate' }}" href="{{ url_for('main.curate') }}">จัดข่าวเด่น</a>
+    {% if current_user.is_authenticated and current_user.is_admin %}
+      <a class="pill {{ 'on' if ep == 'main.admin_users' }}" href="{{ url_for('main.admin_users') }}">ผู้ใช้</a>
+      <a class="pill {{ 'on' if ep == 'main.admin_logs' }}" href="{{ url_for('main.admin_logs') }}">Log</a>
+    {% endif %}
+    {% block search %}{% endblock %}
+    {% if current_user.is_authenticated %}
+    <form method="post" action="{{ url_for('auth.logout') }}" class="row" style="gap:6px;margin-left:8px">
+      <a class="small mute" href="{{ url_for('auth.account') }}" title="บัญชีของฉัน">{{ current_user.display_name }}</a>
+      <button class="btn ghost sm" type="submit">ออก</button>
+    </form>
+    {% endif %}
+  </nav>
+</header>
+{% endblock %}
+{% block body %}{% endblock %}
+<div class="flash" id="flash">
+  {% with msgs = get_flashed_messages(with_categories=true) %}{% for c, m in msgs %}<div class="{{ c }}">{{ m }}</div>{% endfor %}{% endwith %}
+</div>
+<script>
+setTimeout(()=>{const f=document.getElementById('flash'); if(f) f.style.display='none'},9000);
+async function postJSON(url, data){const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json','X-Requested-With':'fetch'},body:JSON.stringify(data||{})});return r.json()}
+async function postForm(url, data){const fd=new FormData();for(const k in (data||{})) fd.append(k,data[k]);const r=await fetch(url,{method:'POST',headers:{'X-Requested-With':'fetch'},body:fd});return r.json()}
+document.addEventListener('click', async (e)=>{
+  const b=e.target.closest('[data-pin]'); if(!b) return;
+  e.preventDefault(); b.disabled=true;
+  const id=b.dataset.pin, un=b.dataset.unpin==='1';
+  const r=await postForm(un?`/unpin/${id}`:`/pin/${id}`,{top:b.dataset.top||'0'});
+  if(r.ok) location.reload(); else {b.disabled=false; alert('ทำรายการไม่สำเร็จ')}
+});
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

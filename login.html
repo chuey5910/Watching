@@ -1,0 +1,13 @@
+{% extends "auth/_layout.html" %}
+{% block title %}เข้าสู่ระบบ — จับตา.{% endblock %}
+{% block form %}
+<h1>เข้าสู่ระบบ</h1>
+{% if ts_login %}<div class="note">ตรวจพบตัวตน Tailscale: <b>{{ ts_name or '' }}</b> <span class="mute">({{ ts_login }})</span><br><span class="xs mute">เมื่อล็อกอินด้วยรหัสผ่านสำเร็จครั้งแรก ระบบจะจำตัวตนนี้และเข้าให้อัตโนมัติในครั้งถัดไป</span></div>{% endif %}
+<form method="post" class="col" style="gap:14px">
+  <label class="field">ชื่อผู้ใช้<input type="text" name="username" autocomplete="username" required autofocus></label>
+  <label class="field">รหัสผ่าน<input type="password" name="password" autocomplete="current-password" required></label>
+  <label class="check"><input type="checkbox" name="remember" value="1"> จำการเข้าสู่ระบบบนเครื่องนี้</label>
+  <button class="btn primary" style="justify-content:center;padding:13px" type="submit">เข้าสู่ระบบ</button>
+</form>
+{% if registration_open %}<p class="small mute" style="margin:0">ยังไม่มีบัญชี? <a href="{{ url_for('auth.register') }}" style="color:var(--gold);font-weight:600">สมัครและรอผู้ดูแลอนุมัติ</a></p>{% endif %}
+{% endblock %}

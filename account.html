@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}บัญชีของฉัน — จับตา.{% endblock %}
+{% block body %}
+<div class="page narrow">
+  <h2 style="font-size:24px">บัญชีของฉัน</h2>
+  <div class="note col" style="gap:4px">
+    <span><b>{{ current_user.display_name }}</b> <span class="mute">({{ current_user.username }})</span> · {{ 'ผู้ดูแลระบบ' if current_user.is_admin else 'สมาชิก' }}</span>
+    <span class="xs mute">ตัวตน Tailscale: {{ current_user.tailscale_login or 'ยังไม่ผูก (จะผูกอัตโนมัติเมื่อล็อกอินผ่าน tailscale serve)' }}</span>
+    <span class="xs mute">เข้าใช้ล่าสุด {{ current_user.last_login_at|fmt_time('%d/%m/%Y %H:%M') }} จาก {{ current_user.last_login_ip or '—' }}</span>
+  </div>
+  <form method="post" class="col" style="gap:12px">
+    <div class="kicker">เปลี่ยนรหัสผ่าน</div>
+    <label class="field">รหัสผ่านเดิม<input type="password" name="old_password" autocomplete="current-password" required></label>
+    <label class="field">รหัสผ่านใหม่<input type="password" name="new_password" minlength="8" autocomplete="new-password" required></label>
+    <label class="field">ยืนยันรหัสผ่านใหม่<input type="password" name="new_password2" minlength="8" autocomplete="new-password" required></label>
+    <button class="btn primary" type="submit" style="align-self:flex-start">บันทึก</button>
+  </form>
+</div>
+{% endblock %}

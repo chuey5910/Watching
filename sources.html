@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}แหล่งข่าว — จับตา.{% endblock %}
+{% block kicker %}แหล่งข่าวและบัญชีที่เฝ้าติดตาม{% endblock %}
+{% block body %}
+<div class="split">
+  <aside>
+    <div class="col" style="gap:6px">
+      <h2 style="font-size:24px">เพิ่มแหล่งที่ต้องการติดตาม</h2>
+      <p class="small mute" style="margin:0;line-height:1.5">วางลิงก์เว็บไซต์ RSS หรือบัญชีโซเชียล กด “ตรวจสอบ” ระบบจะเดาวิธีดึงและลองดึงตัวอย่างให้ก่อน แล้วเริ่มเก็บข่าวทันทีที่กดเพิ่ม</p>
+    </div>
+    <form method="post" action="{{ url_for('main.source_add') }}" class="col" style="gap:14px">
+      {% with src=None %}{% include "_source_form.html" %}{% endwith %}
+      <button class="btn danger" style="justify-content:center;padding:13px" type="submit">เริ่มติดตามแหล่งนี้</button>
+    </form>
+  </aside>
+
+  <main>
+    <div class="row between wrap">
+      <div class="row wrap" style="gap:8px">
+        <a class="pill {{ 'on' if not t }}" href="{{ url_for('main.sources', sort=sort) }}">ทั้งหมด {{ type_counts.values()|sum }}</a>
+        {% for k, v in SOURCE_TYPES.items() %}<a class="pill {{ 'on' if t == k }}" href="{{ url_for('main.sources', type=k, sort=sort) }}" {% if k == 'social' %}style="{{ '' if t == k else 'border-color:var(--blue);color:var(--blue)' }}"{% endif %}>{{ v }} {{ type_counts.get(k, 0) }}</a>{% endfor %}
+      </div>
+      <form method="get" class="row small mute">
+        {% if t %}<input type="hidden" name="type" value="{{ t }}">{% endif %}
+        เรียงตาม
+        <select name="sort" onchange="this.form.submit()" style="width:auto;padding:8px 12px">
+          <option value="today" {{ 'selected' if sort == 'today' }}>จำนวนข่าววันนี้</option><option value="name" {{ 'selected' if sort == 'name' }}>ชื่อ</option><option value="new" {{ 'selected' if sort == 'new' }}>เพิ่มล่าสุด</option>
+        </select>
+      </form>
+    </div>
+
+    {% set cols = "minmax(0,2fr) 130px 120px 90px 120px 150px 150px" %}
+    <div class="thead" style="grid-template-columns:{{ cols }}"><span>แหล่ง</span><span>ประเภท</span><span>พื้นที่</span><span>24 ชม.</span><span>สถานะ</span><span>แจ้งเตือน</span><span></span></div>
+    <div class="table">
+      {% for s in rows %}
+      <div class="trow {{ 'off' if not s.enabled }}" style="grid-template-columns:{{ cols }};{{ 'border-left:3px solid var(--blue)' if s.source_type == 'social' }}">
+        <span class="col" style="gap:2px;min-width:0">
+          <span style="font-weight:600"><a href="{{ url_for('main.source_edit', sid=s.id) }}">{{ s.name }}</a>
+            {% if s.source_type == 'local' %}<span class="badge" style="background:var(--gold)">ท้องถิ่น</span>{% elif s.source_type == 'social' %}<span class="badge" style="background:var(--blue)">บุคคล</span>{% elif s.source_type == 'government' %}<span class="badge" style="background:var(--green)">รัฐ</span>{% endif %}</span>
+          <span class="xs mute" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ (s.homepage or s.feed_url or '')|replace('https://','')|replace('http://','')|truncate(42) }} · {{ FETCH_KINDS.get(s.fetch_kind, s.fetch_kind) }}{% if s.resolved_feed_url and 'news.google' in s.resolved_feed_url %} → Google News{% elif s.resolved_feed_url %} → ค้นพบเอง{% endif %}{% if s.group_name %} · กลุ่ม: {{ s.group_name }}{% endif %}</span>
+        </span>
+        <span class="small" style="color:var(--ink2)">{{ s.type_label|replace('ในประเทศ','')|replace(' / โซเชียล','') }}</span>
+        <span class="small" style="color:var(--ink2)">{{ s.region }}{% if s.country and s.country != 'ไทย' %} <span class="dim">({{ s.country }})</span>{% endif %}</span>
+        <span style="font-weight:600">{{ counts.get(s.id, 0) }}</span>
+        <span class="row small status-{{ s.last_status }}" title="{{ s.last_error or '' }}"><span class="dot" style="background:currentColor"></span>{{ {'ok':'ปกติ','error':'ดึงไม่ได้','empty':'ว่าง','new':'ยังไม่ดึง'}.get(s.last_status, s.last_status) }}{% if s.last_fetched_at %} <span class="dim">· {{ s.last_fetched_at|ago }}</span>{% endif %}</span>
+        <span class="small" style="color:var(--gold)">{% set ac = s.alert_categories.split(',') if s.alert_categories else [] %}{% for c in ac if c %}{{ CATEGORIES[c].label|truncate(12) }}{% if not loop.last %}, {% endif %}{% else %}{% if s.alert_keywords %}คำ: {{ s.alert_keywords|truncate(18) }}{% else %}<span class="mute">—</span>{% endif %}{% endfor %}</span>
+        <span class="row" style="gap:6px;justify-content:flex-end">
+          <form method="post" action="{{ url_for('main.source_fetch', sid=s.id) }}"><button class="btn sm" title="ดึงตอนนี้">↻</button></form>
+          <form method="post" action="{{ url_for('main.source_toggle', sid=s.id) }}"><button class="btn sm ghost">{{ 'ปิด' if s.enabled else 'เปิด' }}</button></form>
+          <a class="btn sm ghost" href="{{ url_for('main.source_edit', sid=s.id) }}">แก้ไข</a>
+        </span>
+      </div>
+      {% else %}
+      <div class="note">ยังไม่มีแหล่งในหมวดนี้</div>
+      {% endfor %}
+    </div>
+  </main>
+</div>
+{% endblock %}
+{% block scripts %}{% include "_source_form_js.html" %}{% endblock %}

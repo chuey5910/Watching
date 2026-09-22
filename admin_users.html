@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}ผู้ใช้ — จับตา.{% endblock %}
+{% block kicker %}ผู้ใช้และการอนุมัติ{% endblock %}
+{% block body %}
+<div class="page">
+  {% if pending %}
+  <div class="col" style="gap:12px">
+    <h2 style="font-size:22px;color:var(--gold)">รออนุมัติ ({{ pending|length }})</h2>
+    {% for u in pending %}
+    <div class="card" style="border:1px solid var(--gold);flex-direction:row;align-items:center;gap:18px;flex-wrap:wrap">
+      <span class="avatar" style="width:40px;height:40px">{{ u.display_name[:2] }}</span>
+      <span class="col grow" style="gap:3px;min-width:240px">
+        <span style="font-weight:600">{{ u.display_name }} <span class="mute">({{ u.username }})</span></span>
+        <span class="xs mute">สมัคร {{ u.created_at|fmt_time('%d/%m/%Y %H:%M') }} · {{ u.email or 'ไม่ระบุช่องทางติดต่อ' }}{% if u.tailscale_login %} · Tailscale: {{ u.tailscale_login }}{% endif %}</span>
+        {% if u.note %}<span class="small" style="color:var(--ink2)">“{{ u.note }}”</span>{% endif %}
+      </span>
+      <form method="post" action="{{ url_for('main.admin_user_action', uid=u.id, action='approve') }}"><button class="btn primary">อนุมัติ</button></form>
+      <form method="post" action="{{ url_for('main.admin_user_action', uid=u.id, action='reject') }}" onsubmit="return confirm('ปฏิเสธคำขอของ {{ u.username }}?')"><button class="btn ghost" style="color:var(--red)">ปฏิเสธ</button></form>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <h2 style="font-size:22px">ผู้ใช้ทั้งหมด ({{ users|length }})</h2>
+  {% set cols = "minmax(0,2fr) 110px 110px 170px 170px minmax(0,2fr)" %}
+  <div class="thead" style="grid-template-columns:{{ cols }}"><span>ผู้ใช้</span><span>สิทธิ์</span><span>สถานะ</span><span>เข้าใช้ล่าสุด</span><span>Tailscale</span><span></span></div>
+  <div class="table">
+    {% for u in users %}
+    <div class="trow" style="grid-template-columns:{{ cols }}">
+      <span class="col" style="gap:2px"><span style="font-weight:600">{{ u.display_name }} <span class="mute">({{ u.username }})</span></span><span class="xs mute">{{ u.email or '' }}{% if u.approved_by %} · อนุมัติโดย {{ u.approved_by.username }}{% endif %}{% if u.is_locked %} · <span style="color:var(--red)">ล็อกชั่วคราว</span>{% endif %}</span></span>
+      <span class="small">{{ 'ผู้ดูแล' if u.is_admin else 'สมาชิก' }}</span>
+      <span class="small {{ {'approved':'status-ok','pending':'status-empty','rejected':'status-error','disabled':'status-error'}[u.status] }}">{{ USER_STATUS[u.status] }}</span>
+      <span class="xs mute">{{ u.last_login_at|fmt_time('%d/%m %H:%M') }}<br>{{ u.last_login_ip or '' }}</span>
+      <span class="xs mute" style="word-break:break-all">{{ u.tailscale_login or '—' }}</span>
+      <span class="row wrap" style="gap:6px;justify-content:flex-end">
+        {% if u.status != 'approved' %}<form method="post" action="{{ url_for('main.admin_user_action', uid=u.id, action='approve') }}"><button class="btn sm primary">อนุมัติ</button></form>{% endif %}
+        {% if u.status == 'approved' and u.id != current_user.id %}<form method="post" action="{{ url_for('main.admin_user_action', uid=u.id, action='disable') }}" onsubmit="return confirm('ระงับ {{ u.username }}?')"><button class="btn sm ghost" style="color:var(--red)">ระงับ</button></form>{% endif %}
+        {% if u.is_admin and u.id != current_user.id %}<form method="post" action="{{ url_for('main.admin_user_action', uid=u.id, action='make_member') }}"><button class="btn sm ghost">ถอด admin</button></form>
+        {% elif not u.is_admin %}<form method="post" action="{{ url_for('main.admin_user_action', uid=u.id, action='make_admin') }}"><button class="btn sm ghost">ตั้ง admin</button></form>{% endif %}
+        {% if u.is_locked %}<form method="post" action="{{ url_for('main.admin_user_action', uid=u.id, action='unlock') }}"><button class="btn sm ghost">ปลดล็อก</button></form>{% endif %}
+        <form method="post" action="{{ url_for('main.admin_user_action', uid=u.id, action='reset_password') }}" onsubmit="return confirm('รีเซ็ตรหัสผ่านของ {{ u.username }}? รหัสใหม่จะแสดงครั้งเดียว')"><button class="btn sm ghost">รีเซ็ตรหัส</button></form>
+        {% if u.tailscale_login %}<form method="post" action="{{ url_for('main.admin_user_action', uid=u.id, action='clear_tailscale') }}"><button class="btn sm ghost">ยกเลิกผูก TS</button></form>{% endif %}
+      </span>
+    </div>
+    {% endfor %}
+  </div>
+  <div class="note xs">ผู้ใช้ที่ “อนุมัติแล้ว” และล็อกอินผ่าน <code>tailscale serve</code> จะถูกผูกกับตัวตน Tailscale ของเครื่องนั้น ครั้งถัดไประบบเข้าให้อัตโนมัติโดยไม่ต้องกรอกรหัสผ่าน · ทุกการกระทำในหน้านี้ถูกบันทึกใน Log</div>
+</div>
+{% endblock %}

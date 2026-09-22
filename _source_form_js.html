@@ -1,0 +1,31 @@
+<script>
+(function(){
+  const seg=document.getElementById('segKind'), soc=document.getElementById('socialFields'), type=document.getElementById('f_type');
+  function setSeg(k){
+    seg.querySelectorAll('button').forEach(b=>b.classList.toggle('on', b.dataset.seg===k));
+    soc.style.display = k==='social' ? '' : 'none';
+    if(k==='social'){ type.value='social'; } else if(type.value==='social'){ type.value='mainstream'; }
+  }
+  seg.addEventListener('click', e=>{const b=e.target.closest('button[data-seg]'); if(b) setSeg(b.dataset.seg)});
+  type.addEventListener('change', ()=>setSeg(type.value==='social'?'social':'media'));
+  document.getElementById('btnDetect').addEventListener('click', async ()=>{
+    const url=document.getElementById('f_homepage').value.trim(); const note=document.getElementById('detectNote');
+    if(!url){note.style.display='';note.className='note err';note.textContent='ใส่ลิงก์ก่อน';return}
+    note.style.display='';note.className='note';note.textContent='กำลังตรวจสอบ…';
+    try{
+      const r=await postJSON('/sources/detect',{url});
+      note.className='note '+(r.ok?'ok':'err');
+      let html=`<b>${r.ok?'ใช้ได้':'ยังดึงไม่ได้'}</b> · วิธี: ${r.kind}${r.platform?' · '+r.platform:''}<br>${r.message||''}`;
+      if(r.sample&&r.sample.length){html+='<ul style="margin:6px 0 0 16px;padding:0">'+r.sample.map(s=>`<li>${s.title}</li>`).join('')+'</ul>'}
+      note.innerHTML=html;
+      document.getElementById('f_kind').value=r.kind||'rss';
+      if(r.feed_url) document.getElementById('f_feed').value=r.feed_url;
+      if(r.handle) document.getElementById('f_handle').value=r.handle;
+      if(r.platform) document.getElementById('f_platform').value=r.platform;
+      if(r.source_type==='social') setSeg('social');
+      const nm=document.getElementById('f_name'); if(!nm.value && r.handle) nm.value=r.handle;
+      if(!nm.value){ try{ nm.value=new URL(url).hostname.replace('www.','') }catch(e){} }
+    }catch(e){note.className='note err';note.textContent='ตรวจสอบไม่สำเร็จ: '+e}
+  });
+})();
+</script>

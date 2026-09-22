@@ -1,0 +1,79 @@
+{# ฟอร์มเพิ่ม/แก้ไขแหล่ง — ใช้ร่วมกันใน sources.html และ source_edit.html (ตัวแปร src อาจเป็น None) #}
+{% set s = src %}
+<div class="segment" id="segKind">
+  <button type="button" class="{{ 'on' if not s or s.source_type != 'social' }}" data-seg="media">สำนักข่าว / เว็บไซต์</button>
+  <button type="button" class="{{ 'on' if s and s.source_type == 'social' }}" data-seg="social">บัญชีโซเชียลบุคคล</button>
+</div>
+
+<label class="field">ลิงก์เว็บไซต์ / RSS / โปรไฟล์ (วางแล้วกด “ตรวจสอบ”)
+  <div class="row">
+    <input type="url" name="homepage" id="f_homepage" value="{{ s.homepage or '' }}" placeholder="https://www.example.co.th/ หรือ https://t.me/ชื่อช่อง" {{ 'required' if not s }}>
+    <button type="button" class="btn" id="btnDetect">ตรวจสอบ</button>
+  </div>
+</label>
+<div id="detectNote" class="note" style="display:none"></div>
+
+<label class="field">ชื่อที่แสดง <input type="text" name="name" id="f_name" value="{{ s.name if s else '' }}" required placeholder="เช่น เชียงรายโฟกัส"></label>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+  <label class="field">ประเภท
+    <select name="source_type" id="f_type">
+      {% for k, v in SOURCE_TYPES.items() %}<option value="{{ k }}" {{ 'selected' if s and s.source_type == k }}>{{ v }}</option>{% endfor %}
+    </select>
+  </label>
+  <label class="field">วิธีดึง
+    <select name="fetch_kind" id="f_kind">
+      {% for k, v in FETCH_KINDS.items() %}<option value="{{ k }}" {{ 'selected' if s and s.fetch_kind == k }}>{{ v }}</option>{% endfor %}
+    </select>
+  </label>
+  <label class="field">พื้นที่ <input type="text" name="region" value="{{ s.region if s else 'ทั่วประเทศ' }}" list="regions"></label>
+  <label class="field">ภาษา
+    <select name="language"><option value="th" {{ 'selected' if not s or s.language == 'th' }}>ไทย</option><option value="en" {{ 'selected' if s and s.language == 'en' }}>อังกฤษ</option></select>
+  </label>
+</div>
+<datalist id="regions"><option>ทั่วประเทศ</option><option>กรุงเทพฯ</option><option>ภาคเหนือ</option><option>อีสาน</option><option>ภาคกลาง</option><option>ภาคตะวันออก</option><option>ภาคใต้</option><option>ชายแดนใต้</option><option>ชายแดน</option><option>ต่างประเทศ</option></datalist>
+
+<label class="field">RSS / คำค้น / channel id (ถ้ามี — ปล่อยว่างให้ระบบหาเอง)
+  <input type="text" name="feed_url" id="f_feed" value="{{ s.feed_url or '' }}" placeholder="https://…/feed หรือ คำค้นสำหรับ Google News">
+</label>
+
+<div id="socialFields" class="col" style="gap:12px;{{ '' if s and s.source_type == 'social' else 'display:none' }}">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+    <label class="field">แพลตฟอร์ม
+      <select name="platform" id="f_platform">
+        {% for p in ['', 'facebook', 'x', 'tiktok', 'youtube', 'telegram', 'bluesky', 'instagram', 'other'] %}<option value="{{ p }}" {{ 'selected' if s and s.platform == p }}>{{ p or '—' }}</option>{% endfor %}
+      </select>
+    </label>
+    <label class="field">@handle / channel <input type="text" name="handle" id="f_handle" value="{{ s.handle or '' }}"></label>
+  </div>
+  <label class="field">กลุ่ม (สำหรับกฎอัตโนมัติ)
+    <input type="text" name="group_name" value="{{ s.group_name or '' }}" list="groups" placeholder="นักการเมือง / ผู้นำการชุมนุม / นักข่าวพลเมือง / ผู้นำชุมชน">
+    <datalist id="groups"><option>นักการเมือง</option><option>ผู้นำการชุมนุม</option><option>นักข่าวพลเมือง</option><option>ผู้นำชุมชน</option><option>นักวิชาการ</option><option>หน่วยงาน</option>{% for g in groups %}<option>{{ g }}</option>{% endfor %}</datalist>
+  </label>
+  <div class="note warn xs">Telegram (t.me/s/ช่อง), YouTube, Bluesky ดึงโพสต์ได้ตรง · Facebook / X / TikTok / Instagram ไม่มี RSS สาธารณะ — ระบบจะติดตาม “ข่าวที่กล่าวถึงบัญชีนี้” ผ่าน Google News แทน{% if rsshub %} หรือดึงโพสต์ตรงผ่าน RSSHub ที่ตั้งค่าไว้แล้ว{% else %} (ตั้งค่า RSSHUB_BASE ใน .env เพื่อดึงโพสต์ตรง){% endif %}</div>
+</div>
+
+<div class="col" style="gap:8px">
+  <span class="small" style="color:var(--ink2)">หมวดที่ให้ระบบคัดกรองจากแหล่งนี้</span>
+  <div class="row wrap" style="gap:8px">
+    {% for k, c in CATEGORIES.items() %}
+    <label class="pill" style="cursor:pointer"><input type="checkbox" name="categories" value="{{ k }}" style="width:14px;height:14px;padding:0" {{ 'checked' if not s or k in s.category_list }}> <span class="cat-{{ k }}">{{ c.label }}</span></label>
+    {% endfor %}
+  </div>
+  <label class="check"><input type="checkbox" name="keep_all" value="1" {{ 'checked' if s and s.keep_all }}> เก็บทุกโพสต์/ข่าวจากแหล่งนี้โดยไม่กรองหมวด (เหมาะกับบัญชีบุคคลและหน่วยงานเตือนภัย)</label>
+</div>
+
+<div class="col" style="gap:8px">
+  <span class="small" style="color:var(--ink2)">แจ้งเตือนทันที (LINE) เมื่อแหล่งนี้มีข่าวหมวด</span>
+  <div class="row wrap" style="gap:8px">
+    {% for k, c in CATEGORIES.items() %}
+    <label class="pill" style="cursor:pointer"><input type="checkbox" name="alert_categories" value="{{ k }}" style="width:14px;height:14px;padding:0" {{ 'checked' if s and k in (s.alert_categories or '').split(',') }}> {{ c.label }}</label>
+    {% endfor %}
+  </div>
+  <input type="text" name="alert_keywords" value="{{ s.alert_keywords or '' }}" placeholder="หรือเมื่อพบคำ (คั่นด้วย ,) เช่น นัดหมาย, รวมตัว, เคลื่อนขบวน">
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+  <label class="field">น้ำหนัก (0–3) <input type="number" name="priority" min="0" max="3" value="{{ s.priority if s else 0 }}"></label>
+  <label class="field">สถานะ <select name="enabled"><option value="1" {{ 'selected' if not s or s.enabled }}>เปิดใช้งาน</option><option value="0" {{ 'selected' if s and not s.enabled }}>ปิดชั่วคราว</option></select></label>
+</div>

@@ -1,0 +1,19 @@
+{% extends "auth/_layout.html" %}
+{% block title %}รออนุมัติ — จับตา.{% endblock %}
+{% block form %}
+<div class="row" style="gap:14px">
+  <span style="width:48px;height:48px;border-radius:50%;background:#2A2418;border:1px solid var(--gold);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F0A868" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+  </span>
+  <h1>รอผู้ดูแลอนุมัติ</h1>
+</div>
+{% if u and u.status == 'approved' %}
+  <div class="note ok">บัญชี <b>{{ u.username }}</b> ได้รับอนุมัติแล้ว — <a href="{{ url_for('auth.login') }}" style="color:var(--gold);font-weight:600">เข้าสู่ระบบได้เลย</a></div>
+{% elif u and u.status in ('rejected','disabled') %}
+  <div class="note err">คำขอของบัญชี <b>{{ u.username }}</b> ถูกปฏิเสธหรือระงับ กรุณาติดต่อผู้ดูแลระบบ</div>
+{% else %}
+  <p style="margin:0;line-height:1.7;color:var(--ink2)">ส่งคำขอสมัคร{% if u %}ของ <b>{{ u.username }}</b>{% endif %}เรียบร้อยแล้ว ผู้ดูแลระบบจะเห็นคำขอนี้ในหน้า “ผู้ใช้” และจะอนุมัติเมื่อตรวจสอบตัวตนแล้ว ระหว่างนี้จะยังเข้าดูกระดานไม่ได้</p>
+  <div class="note xs">สมัครเมื่อ {{ u.created_at|fmt_time('%d/%m/%Y %H:%M') if u else '—' }} น. · หน้านี้รีเฟรชเพื่อตรวจสถานะได้ทุกเมื่อ</div>
+{% endif %}
+<a class="btn" href="{{ url_for('auth.login') }}" style="align-self:flex-start">กลับหน้าเข้าสู่ระบบ</a>
+{% endblock %}

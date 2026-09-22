@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block header %}{% endblock %}
+{% block title %}{{ code }} — จับตา.{% endblock %}
+{% block body %}
+<div class="page narrow" style="min-height:100vh;justify-content:center">
+  <div class="brand">จับตา<span>.</span></div>
+  <h1 style="font-size:64px;color:var(--red)">{{ code }}</h1>
+  <p style="margin:0;color:var(--ink2);line-height:1.6">{{ msg }}</p>
+  <a class="btn" href="{{ url_for('main.board') }}" style="align-self:flex-start">กลับหน้าแรก</a>
+</div>
+{% endblock %}

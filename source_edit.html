@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}แก้ไข {{ src.name }} — จับตา.{% endblock %}
+{% block kicker %}แก้ไขแหล่งข่าว{% endblock %}
+{% block body %}
+<div class="split">
+  <aside>
+    <div class="row between">
+      <h2 style="font-size:24px">{{ src.name }}</h2>
+      <a class="small mute" href="{{ url_for('main.sources', type=src.source_type) }}">← กลับ</a>
+    </div>
+    <form method="post" class="col" style="gap:14px">
+      {% include "_source_form.html" %}
+      <div class="row">
+        <button class="btn primary grow" style="justify-content:center" type="submit">บันทึก</button>
+      </div>
+    </form>
+    <div class="row">
+      <form method="post" action="{{ url_for('main.source_fetch', sid=src.id) }}"><button class="btn">↻ ดึงตอนนี้</button></form>
+      {% if current_user.is_admin %}<form method="post" action="{{ url_for('main.source_delete', sid=src.id) }}" onsubmit="return confirm('ลบแหล่งนี้และข่าวทั้งหมดของแหล่งนี้?')"><button class="btn ghost" style="color:var(--red)">ลบแหล่งนี้</button></form>{% endif %}
+    </div>
+  </aside>
+  <main>
+    <div class="row wrap" style="gap:12px">
+      <div class="stat grow"><span class="kicker">สถานะล่าสุด</span><b class="status-{{ src.last_status }}">{{ {'ok':'ปกติ','error':'ดึงไม่ได้','empty':'ว่าง','new':'ยังไม่ดึง'}.get(src.last_status, src.last_status) }}</b><span class="xs mute">{{ src.last_fetched_at|fmt_time('%d/%m %H:%M') }}</span></div>
+      <div class="stat grow"><span class="kicker">ข่าว 24 ชม.</span><b>{{ src.today_count() }}</b></div>
+      <div class="stat grow"><span class="kicker">ผิดพลาดติดต่อกัน</span><b>{{ src.consecutive_errors or 0 }}</b></div>
+    </div>
+    {% if src.last_error %}<div class="note err"><b>ข้อผิดพลาดล่าสุด:</b> {{ src.last_error }}</div>{% endif %}
+    {% if src.resolved_feed_url %}<div class="note"><b>URL ที่ใช้ดึงจริง:</b> <span class="small" style="word-break:break-all">{{ src.resolved_feed_url }}</span></div>{% endif %}
+    <div class="kicker">ประวัติการดึง</div>
+    <div class="table">
+      {% for l in logs %}
+      <div class="trow" style="grid-template-columns:130px 90px 80px 80px 90px minmax(0,1fr)">
+        <span class="small">{{ l.at|fmt_time('%d/%m %H:%M:%S') }}</span><span class="small status-{{ l.status }}">{{ l.status }}</span>
+        <span class="small">ใหม่ {{ l.new_items }}</span><span class="small">เก็บ {{ l.kept_items }}</span><span class="small mute">{{ l.duration_ms }} ms</span>
+        <span class="xs mute" style="word-break:break-all">{{ l.message }}</span>
+      </div>
+      {% else %}<div class="note">ยังไม่มีประวัติ</div>{% endfor %}
+    </div>
+    <div class="kicker">ข่าวล่าสุดจากแหล่งนี้</div>
+    <div class="col" style="gap:0">
+      {% for a in arts %}
+      <div class="item"><a class="title" href="{{ a.url }}" target="_blank" rel="noopener">{{ a.display_title }}</a>
+        <span class="meta">{{ a.published_at|fmt_time('%d/%m %H:%M') }}{% for c in a.category_list %} · <span class="cat-{{ c }}">{{ CATEGORIES[c].label }}</span>{% endfor %} · {{ LEVELS[a.level].label }}</span></div>
+      {% else %}<div class="note">ยังไม่มีข่าวที่เข้าหมวด</div>{% endfor %}
+    </div>
+  </main>
+</div>
+{% endblock %}
+{% block scripts %}{% include "_source_form_js.html" %}{% endblock %}

@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block header %}{% endblock %}
+{% block body %}
+<div class="auth">
+  <div class="art">
+    <div class="col" style="gap:14px">
+      <div class="brand">จับตา<span>.</span></div>
+      <div class="kicker">กระดานข่าวเฝ้าระวังสถานการณ์</div>
+    </div>
+    <div class="col" style="gap:14px;max-width:420px">
+      <p class="small" style="margin:0;line-height:1.7;color:var(--ink2)">ระบบภายในสำหรับติดตามข่าวการเมือง การปกครอง ความเดือดร้อนของประชาชน ภัยพิบัติ และการชุมนุม จากสื่อหลัก สื่อท้องถิ่น สื่อต่างประเทศ และบัญชีบุคคลที่เฝ้าติดตาม</p>
+      <div class="row wrap" style="gap:8px">
+        <span class="chip small">เข้าถึงได้เฉพาะภายใน Tailnet</span>
+        <span class="chip small">ต้องได้รับอนุมัติก่อนใช้งาน</span>
+        <span class="chip small">บันทึก log ทุกการเข้าใช้</span>
+      </div>
+    </div>
+  </div>
+  <div class="form">
+    {% block form %}{% endblock %}
+  </div>
+</div>
+{% endblock %}

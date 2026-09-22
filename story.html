@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}{{ s.title }} — จับตา.{% endblock %}
+{% block body %}
+<div class="story-head">
+  <div class="row wrap">
+    <a class="small mute" href="{{ url_for('main.board') }}">← กลับกระดาน</a>
+    {% if s.category %}<span class="tag cat-{{ s.category }} bcat-{{ s.category }}" style="border:1px solid">{{ CATEGORIES[s.category].label }}</span>{% endif %}
+    <span class="tag lvl-{{ s.level }}" style="border:1px solid">{{ LEVELS[s.level].label }}</span>
+    {% if s.pin %}<span class="tag fill" style="background:var(--red)">ปักหมุด #{{ s.pin.position }}</span>{% endif %}
+    {% if s.local_first %}<span class="tag" style="border:1px solid var(--gold);color:var(--gold)">สื่อท้องถิ่น/บุคคลรายงานก่อนสื่อหลัก</span>{% endif %}
+  </div>
+  <h1>{{ s.title }}</h1>
+  <div class="row wrap small mute">
+    <span>{{ s.source_count }} แหล่ง · {{ arts|length }} รายงาน</span><span>·</span>
+    <span>รายงานแรก {{ s.first_seen_at|fmt_time('%d/%m %H:%M') }} น.</span><span>·</span>
+    <span>ล่าสุด {{ s.last_seen_at|fmt_time('%d/%m %H:%M') }} น. ({{ s.last_seen_at|ago }})</span>
+  </div>
+  <div class="row wrap">
+    {% if s.pin %}<button class="btn" data-pin="{{ s.id }}" data-unpin="1">ปลดหมุด</button>{% else %}
+      <button class="btn danger" data-pin="{{ s.id }}" data-top="1">ปักหมุดอันดับ 1</button>
+      <button class="btn" data-pin="{{ s.id }}">ปักหมุด</button>{% endif %}
+    <a class="btn ghost" href="{{ url_for('main.board', q=s.title[:30]) }}">ค้นหาข่าวคล้ายกัน</a>
+  </div>
+</div>
+<div class="srcs">
+  {% for a in arts %}
+  <div class="src">
+    {% if a.image_url %}<img src="{{ a.image_url }}" alt="" loading="lazy" referrerpolicy="no-referrer">{% endif %}
+    <div class="row between small">
+      <span style="font-weight:600">{{ a.source.name }} <span class="mute">· {{ SOURCE_TYPES[a.source.source_type] }}</span></span>
+      <span class="mute">{{ a.published_at|fmt_time('%d/%m %H:%M') }}</span>
+    </div>
+    <a href="{{ a.url }}" target="_blank" rel="noopener" style="font-size:16px;font-weight:600;line-height:1.4">{{ a.display_title }} ↗</a>
+    {% if a.summary %}<p class="small" style="margin:0;color:var(--ink2);line-height:1.55">{{ a.summary[:400] }}{% if a.summary|length > 400 %}…{% endif %}</p>{% endif %}
+    <div class="row wrap xs mute">
+      {% for c in a.category_list %}<span class="cat-{{ c }}">{{ CATEGORIES[c].label }}</span>{% endfor %}
+      {% if a.matched_keywords %}<span>· คำที่พบ: {{ a.matched_keywords.split(',')[:6]|join(', ') }}</span>{% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

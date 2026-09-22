@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+{% block brandsize %}{% endblock %}
+{% block subline %}{{ thai_date() }} · อัปเดตล่าสุด {{ last_fetch|fmt_time }} น. · ติดตาม {{ total_sources }} แหล่ง / {{ social_count }} บัญชี · {{ total_articles }} ข่าวใน {{ hours }} ชม.{% endblock %}
+{% block search %}
+<form class="search" method="get" action="{{ url_for('main.board') }}">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+  <input type="search" name="q" value="{{ q or '' }}" placeholder="ค้นหาข่าว / คำสำคัญ" aria-label="ค้นหา">
+  {% if cat %}<input type="hidden" name="cat" value="{{ cat }}">{% endif %}
+</form>
+{% endblock %}
+{% block body %}
+{% macro srcname(s) -%}
+  {{ s.name }}{% if s.source_type == 'local' %} <span style="color:var(--gold)">(ท้องถิ่น)</span>{% elif s.source_type == 'social' %} <span style="color:var(--blue)">(บัญชี)</span>{% elif s.source_type == 'foreign' %} <span class="dim">(ตปท.)</span>{% endif %}
+{%- endmacro %}
+
+{% if ticker %}
+<div class="ticker">
+  <div class="label"><span class="dot" style="background:var(--bg)"></span>ด่วน</div>
+  <div class="items">
+    <div class="ticker-track">
+      {% for a in ticker %}<span><a href="{{ a.url }}" target="_blank" rel="noopener">{{ a.published_at|fmt_time }} · {{ a.display_title }} — {{ a.source.name }}</a></span><span class="sep">|</span>{% endfor %}
+      {% for a in ticker %}<span><a href="{{ a.url }}" target="_blank" rel="noopener">{{ a.published_at|fmt_time }} · {{ a.display_title }} — {{ a.source.name }}</a></span><span class="sep">|</span>{% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<div class="board">
+  <!-- ซ้าย: ปักหมุด -->
+  <aside class="rail left">
+    <div class="row between">
+      <div class="row">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#E4572E" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5"/><path d="M9 3h6l-1 7 3 3H7l3-3z"/></svg>
+        <h2>ปักหมุดไว้บนสุด</h2>
+      </div>
+      <a class="small" style="color:var(--gold);font-weight:600" href="{{ url_for('main.curate') }}">จัดการ</a>
+    </div>
+    {% if pins %}
+      <div class="col" style="gap:12px">
+      {% for p in pins %}
+        <a class="pin {{ 'first' if loop.first }}" href="{{ url_for('main.story', story_id=p.story_id) }}">
+          <span class="n">{{ p.position }}</span>
+          <span class="col" style="gap:5px">
+            <span class="title">{{ p.story.title }}</span>
+            <span class="meta">{{ CATEGORIES.get(p.story.category, {}).get('label', 'ทั่วไป') }} · {{ p.story.source_count }} แหล่ง{% if p.rule %} · กฎอัตโนมัติ{% endif %}</span>
+          </span>
+        </a>
+      {% endfor %}
+      </div>
+    {% else %}
+      <p class="small mute" style="margin:0;line-height:1.5">ยังไม่มีข่าวปักหมุด — วางเมาส์บนข่าวใดก็ได้แล้วกด “ปักหมุด” หรือให้กฎอัตโนมัติจัดการ ข่าวที่ปักจะขึ้นเป็นข่าวใหญ่ด้านขวาและอยู่บนสุดจนกว่าจะปลด</p>
+    {% endif %}
+
+    <div class="hr"></div>
+    <div class="col">
+      <div class="kicker">คำสำคัญที่พุ่งขึ้นวันนี้</div>
+      <div class="row wrap" style="gap:8px">
+        {% for t in trending %}<a class="chip" href="{{ url_for('main.board', q=t.word) }}">#{{ t.word }} {% if t.pct >= 50 %}<span style="color:var(--red)">↑ {{ t.pct }}%</span>{% else %}<span class="mute">{{ t.count }}</span>{% endif %}</a>{% else %}<span class="small mute">ยังไม่มีข้อมูลพอ</span>{% endfor %}
+      </div>
+    </div>
+    {% if watch_counts %}
+    <div class="col">
+      <div class="kicker">คำที่ติดตามพิเศษ</div>
+      <div class="row wrap" style="gap:8px">
+        {% for w in watch_counts %}<a class="chip" href="{{ url_for('main.board', q=w.word) }}" style="{{ 'border:1px solid var(--red)' if w.count else '' }}">{{ w.word }} <span class="{{ 'lvl-essential' if w.count else 'mute' }}">{{ w.count }}</span></a>{% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="hr"></div>
+    <div class="col">
+      <div class="kicker">พื้นที่ที่มีข่าวมากสุด</div>
+      <div class="col" style="gap:8px;font-size:13px">
+        {% for r, c in region_rows %}
+          <div class="row between"><a href="{{ url_for('main.board', region=r) }}">{{ r or 'ไม่ระบุ' }}</a><span style="font-weight:600;{{ 'color:var(--red)' if loop.first }}">{{ c }}</span></div>
+          <div class="bar"><i class="{{ 'hot' if loop.first }}" style="width:{{ (c * 100 / region_max)|round }}%"></i></div>
+        {% else %}<span class="small mute">ยังไม่มีข่าว</span>{% endfor %}
+      </div>
+    </div>
+  </aside>
+
+  <!-- กลาง -->
+  <main class="center">
+    {% if hero %}
+    <section class="hero">
+      <div class="col" style="gap:16px">
+        <div class="row wrap">
+          {% if pins and pins[0].story_id == hero.id %}<span class="tag fill" style="background:var(--red)">ปักหมุด #1</span>{% else %}<span class="tag" style="border:1px solid var(--line2);color:var(--mute)">เด่นที่สุดตอนนี้</span>{% endif %}
+          {% if hero.category %}<span class="tag bcat-{{ hero.category }} cat-{{ hero.category }}" style="border:1px solid">{{ CATEGORIES[hero.category].label }}</span>{% endif %}
+          <span class="tag lvl-{{ hero.level }}" style="border:1px solid">{{ LEVELS[hero.level].label }}</span>
+          <span class="small mute">{{ hero_first.region if hero_first else '' }} · เริ่ม {{ hero.first_seen_at|fmt_time }} น. · ล่าสุด {{ hero.last_seen_at|ago }}{% if hero.local_first %} · <span style="color:var(--gold)">สื่อท้องถิ่น/บุคคลรายงานก่อน</span>{% endif %}</span>
+        </div>
+        <h1><a href="{{ url_for('main.story', story_id=hero.id) }}">{{ hero.title }}</a></h1>
+        {% if hero_articles and hero_articles[0].summary %}<p>{{ hero_articles[0].summary[:420] }}{% if hero_articles[0].summary|length > 420 %}…{% endif %}</p>{% endif %}
+        <div class="row wrap small mute" style="gap:8px 14px">
+          <span style="font-weight:600;color:var(--ink)">รายงานตรงกัน {{ hero.source_count }} แหล่ง:</span>
+          {% for s in hero.source_names(6) %}<span>{{ srcname(s) }}</span>{% if not loop.last %}<span>·</span>{% endif %}{% endfor %}
+        </div>
+        <div class="row wrap">
+          <a class="btn primary" href="{{ url_for('main.story', story_id=hero.id) }}">อ่านรวมทุกแหล่ง</a>
+          {% if hero_articles %}<a class="btn" href="{{ hero_articles[0].url }}" target="_blank" rel="noopener">เปิดข่าวล่าสุด ↗</a>{% endif %}
+          {% if hero.pin %}<button class="btn ghost" data-pin="{{ hero.id }}" data-unpin="1">ปลดหมุด</button>{% else %}<button class="btn" data-pin="{{ hero.id }}" data-top="1">ปักหมุดอันดับ 1</button>{% endif %}
+        </div>
+      </div>
+      <div class="col" style="gap:10px">
+        <div class="img">{% set img = (hero_articles|selectattr('image_url')|map(attribute='image_url')|list|first) %}{% if img %}<img src="{{ img }}" alt="" loading="lazy" referrerpolicy="no-referrer">{% else %}[ยังไม่มีภาพจากแหล่งข่าว]{% endif %}</div>
+        <div class="timeline">
+          <div class="kicker" style="margin-bottom:4px">ไทม์ไลน์ ({{ hero_articles|length }} รายงาน)</div>
+          {% for a in hero_articles[:6] %}
+            <div class="t {{ 'first' if loop.first }}"><b>{{ a.published_at|fmt_time }}</b><span><a href="{{ a.url }}" target="_blank" rel="noopener">{{ a.source.name }}</a>: {{ a.display_title[:70] }}{% if a.display_title|length > 70 %}…{% endif %}</span></div>
+          {% endfor %}
+        </div>
+      </div>
+    </section>
+    {% else %}
+    <section class="hero" style="grid-template-columns:1fr">
+      <div class="col" style="gap:12px">
+        <h1 style="font-size:30px">ยังไม่มีข่าวในระบบ</h1>
+        <p>กด “ดึงข่าวตอนนี้” เพื่อเริ่มเก็บข่าวจากแหล่งทั้งหมด (ครั้งแรกใช้เวลาประมาณ 1–3 นาที) หลังจากนั้นระบบจะดึงเองทุก {{ config.FETCH_INTERVAL_MINUTES }} นาที</p>
+        <form method="post" action="{{ url_for('main.fetch_now') }}"><button class="btn primary">ดึงข่าวตอนนี้</button></form>
+      </div>
+    </section>
+    {% endif %}
+
+    <section>
+      <div class="row wrap" style="padding:18px 36px 0;gap:6px">
+        <span class="kicker" style="margin-right:10px">หมวด</span>
+        <a class="pill {{ 'on' if not cat }}" href="{{ url_for('main.board', q=q, h=hours, region=region) }}">ทั้งหมด</a>
+        {% for k, c in CATEGORIES.items() %}<a class="pill {{ 'on' if cat == k }} {{ 'bcat-'+k+' cat-'+k if cat != k }}" href="{{ url_for('main.board', cat=k, q=q, h=hours, region=region) }}">{{ c.label }}</a>{% endfor %}
+        <span class="grow"></span>
+        {% for hh, lab in [(6,'6 ชม.'),(24,'24 ชม.'),(72,'3 วัน'),(168,'7 วัน')] %}<a class="pill {{ 'on' if hours == hh }}" href="{{ url_for('main.board', cat=cat, q=q, h=hh, region=region) }}">{{ lab }}</a>{% endfor %}
+        {% if q or region %}<a class="pill" style="border-color:var(--red);color:var(--red)" href="{{ url_for('main.board') }}">ล้างตัวกรอง{% if q %} “{{ q }}”{% endif %}{% if region %} · {{ region }}{% endif %} ✕</a>{% endif %}
+      </div>
+
+      <div class="lanes {{ 'single' if cat }}">
+        {% for k, stories in lanes %}
+        <div class="lane">
+          <div class="lane-head bcat-{{ k }}">
+            <h2 class="cat-{{ k }}">{{ CATEGORIES[k].label }}</h2>
+            <span class="small mute">{{ stories|length }} เรื่อง</span>
+          </div>
+          {% for s in stories %}
+            {% if loop.first and not cat %}
+            <div class="card {{ 'hot' if s.level == 'essential' }}">
+              <span class="meta cat-{{ k }}" style="font-weight:600">{{ LEVELS[s.level].label }}{% if s.local_first %} · <span style="color:var(--gold)">เฝ้าระวัง: ท้องถิ่นรายงานก่อน</span>{% endif %} · {{ s.last_seen_at|ago }}</span>
+              <a class="title" href="{{ url_for('main.story', story_id=s.id) }}">{{ s.title }}</a>
+              <span class="meta">{% for src in s.source_names(3) %}{{ srcname(src) }}{% if not loop.last %} · {% endif %}{% endfor %}{% if s.source_count > 3 %} · +{{ s.source_count - 3 }}{% endif %}</span>
+              <button class="pinbtn" data-pin="{{ s.id }}">📌 ปักหมุด</button>
+            </div>
+            {% else %}
+            <div class="item">
+              <a class="title" href="{{ url_for('main.story', story_id=s.id) }}">{{ s.title }}</a>
+              <span class="meta">{% for src in s.source_names(2) %}{{ srcname(src) }}{% if not loop.last %} · {% endif %}{% endfor %}{% if s.source_count > 2 %} · +{{ s.source_count - 2 }} แหล่ง{% endif %} · {{ s.last_seen_at|ago }}{% if s.level in ('essential','important') %} · <span class="lvl-{{ s.level }}">{{ LEVELS[s.level].label }}</span>{% endif %}</span>
+              <button class="pinbtn" data-pin="{{ s.id }}">📌 ปักหมุด</button>
+            </div>
+            {% endif %}
+          {% else %}
+            <span class="small mute">ยังไม่มีข่าวหมวดนี้ในช่วงเวลาที่เลือก</span>
+          {% endfor %}
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="must">
+      <div class="col" style="gap:6px">
+        <h2>สมควรรู้<br>วันนี้</h2>
+        <div class="small mute" style="line-height:1.5">คัดจากทุกแหล่ง แยกตามระดับความจำเป็น</div>
+      </div>
+      {% for lvl, meta in LEVELS.items() %}
+      <div class="lv" style="border-color:{{ meta.color }}">
+        <span class="k" style="color:{{ meta.color }}">{{ meta.label }}</span>
+        {% if must[lvl] %}<a href="{{ url_for('main.story', story_id=must[lvl].id) }}">{{ must[lvl].title }}</a><span class="small mute">{{ must[lvl].source_count }} แหล่ง · {{ must[lvl].last_seen_at|ago }}</span>{% else %}<span class="small mute">—</span>{% endif %}
+      </div>
+      {% endfor %}
+    </section>
+  </main>
+
+  <!-- ขวา: เฝ้าติดตามบุคคล -->
+  <aside class="rail right">
+    <div class="row between">
+      <div class="row">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7FB7E6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>
+        <h2>เฝ้าติดตามบุคคล</h2>
+      </div>
+      <a class="small" style="color:var(--gold);font-weight:600" href="{{ url_for('main.sources', type='social') }}">+ เพิ่ม</a>
+    </div>
+    <div class="col" style="gap:12px">
+      {% for a in social %}
+      <div class="post" style="border-left-color:{{ {'ผู้นำการชุมนุม':'var(--purple)','นักการเมือง':'var(--gold)','นักข่าวพลเมือง':'var(--blue)','ผู้นำชุมชน':'var(--green)'}.get(a.source.group_name, 'var(--blue)') }}">
+        <div class="row">
+          <span class="avatar">{{ a.source.name[:2] }}</span>
+          <span class="col" style="gap:0">
+            <span class="small" style="font-weight:600">{{ a.source.name }}</span>
+            <span class="xs mute">{{ (a.source.platform or a.source.fetch_kind)|capitalize }} · {{ a.published_at|ago }}{% if a.source.group_name %} · กลุ่ม: {{ a.source.group_name }}{% endif %}</span>
+          </span>
+        </div>
+        <p><a href="{{ a.url }}" target="_blank" rel="noopener">{{ (a.summary or a.display_title)[:220] }}</a></p>
+        {% if a.is_alert %}<span class="alert">● เข้าเงื่อนไขแจ้งเตือน{% if a.matched_keywords %}: {{ a.matched_keywords.split(',')[:3]|join(', ') }}{% endif %}</span>{% endif %}
+      </div>
+      {% else %}
+      <p class="small mute" style="margin:0;line-height:1.5">ยังไม่มีบัญชีที่เฝ้าติดตาม — เพิ่มได้ที่หน้า “แหล่งข่าว → บัญชีบุคคล” รองรับ Telegram, YouTube, Bluesky ดึงตรง; Facebook/X/TikTok ผ่าน RSSHub หรือคำค้น</p>
+      {% endfor %}
+    </div>
+    <div class="hr"></div>
+    <div class="col">
+      <div class="kicker">แหล่งที่รายงานมากสุด ({{ hours }} ชม.)</div>
+      <div class="col" style="gap:8px;font-size:13px">
+        {% for s, c in top_sources %}<div class="row between"><span>{{ srcname(s) }}</span><span class="mute">{{ c }}</span></div>{% endfor %}
+      </div>
+    </div>
+    <div class="hr"></div>
+    <form method="post" action="{{ url_for('main.fetch_now') }}" class="col" style="gap:6px">
+      <button class="btn" style="justify-content:center">↻ ดึงข่าวตอนนี้</button>
+      <span class="xs mute" style="text-align:center">อัตโนมัติทุก {{ config.FETCH_INTERVAL_MINUTES }} นาที · ล่าสุด {{ last_fetch|ago }}</span>
+    </form>
+  </aside>
+</div>
+{% endblock %}
