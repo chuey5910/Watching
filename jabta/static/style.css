@@ -194,3 +194,8 @@ main.center{min-width:0;display:flex;flex-direction:column}
 .watchchip:hover button,.trendchip:hover button{opacity:1}
 .watchchip button:hover{color:var(--red)}
 .trendchip button:hover{color:var(--green)}
+
+/* การ์ดข่าวที่ตรงคำเฝ้าระวังในแถบซ้าย */
+.watchnews{display:block;padding:10px 12px;border-radius:6px;background:var(--panel);
+           border-left:3px solid var(--red);line-height:1.45}
+.watchnews:hover{background:var(--panel2);color:var(--ink)}

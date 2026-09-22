@@ -189,6 +189,9 @@ class Article(db.Model):
     matched_keywords = db.Column(db.String(400))
     region = db.Column(db.String(80))
     is_alert = db.Column(db.Boolean, default=False)  # เข้าเงื่อนไขแจ้งเตือน
+    # คำเฝ้าระวังที่เจอในหัวข้อหรือเนื้อข่าว คั่น , — ข่าวที่มีค่านี้จะไม่ถูกกรองทิ้ง
+    # แม้ไม่เข้า 5 หมวด เพราะผู้ใช้สั่งเฝ้าระวังคำนั้นไว้เอง
+    watch_hits = db.Column(db.String(400))
     hidden = db.Column(db.Boolean, default=False)
 
     @property

@@ -60,6 +60,21 @@
       <div class="xs dim">อยู่ถาวรจนกว่าจะกด × — เพิ่มโดยพิมพ์ <b>#คำ</b> ในช่องค้นหาด้านบน</div>
     </div>
 
+    {% if watch_news %}
+    <div class="col">
+      <div class="kicker" style="color:var(--red)">ข่าวที่ตรงคำเฝ้าระวัง · {{ watch_news|length }} ชิ้น</div>
+      <div class="col" style="gap:10px">
+        {% for a in watch_news %}
+        <a href="{{ a.url }}" target="_blank" rel="noopener" class="watchnews">
+          <div class="xs" style="color:var(--red)">{{ a.watch_hits }} · {{ a.published_at|fmt_time }} น.</div>
+          <div class="small">{{ a.display_title[:90]|tw }}{% if a.display_title|length > 90 %}…{% endif %}</div>
+          <div class="xs dim">{{ a.source.name }}</div>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
     <div class="col">
       <div class="kicker">คำที่พุ่งขึ้นวันนี้ · ระบบจับเอง</div>
       <div class="row wrap" style="gap:8px">
@@ -217,4 +232,26 @@
     </form>
   </aside>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// กระดานเฝ้าระวังเปิดค้างทั้งวัน — รีโหลดเองทุก 3 นาที
+// ข้ามถ้าแท็บถูกซ่อน หรือกำลังพิมพ์อยู่ในช่องใดช่องหนึ่ง จะได้ไม่ตัดจังหวะ
+(function () {
+  var MINUTES = 3;
+  var key = "jabta.scroll";
+  try {
+    var y = sessionStorage.getItem(key);
+    if (y) { window.scrollTo(0, parseInt(y, 10)); sessionStorage.removeItem(key); }
+  } catch (e) {}
+  setInterval(function () {
+    if (document.hidden) return;
+    var el = document.activeElement;
+    if (el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) return;
+    try { sessionStorage.setItem(key, String(window.scrollY)); } catch (e) {}
+    location.reload();
+  }, MINUTES * 60 * 1000);
+})();
+</script>
 {% endblock %}

@@ -13,7 +13,7 @@ import requests
 from bs4 import BeautifulSoup
 from flask import current_app
 
-from .models import db, Source, Article, FetchLog, now
+from .models import db, Source, Article, FetchLog, Keyword, LEVELS, now
 from .classifier import classify
 from .cluster import assign_story
 
@@ -310,6 +310,10 @@ def store_items(src: Source, items: list[dict]) -> tuple[int, int, list[Article]
     """คืน (จำนวนใหม่ทั้งหมด, จำนวนที่เก็บหลังกรอง, รายการ Article ที่เก็บ)"""
     keep_only = current_app.config["KEEP_ONLY_MATCHED"] and not src.keep_all
     allowed = set(src.category_list)
+    # คำเฝ้าระวังที่ผู้ใช้ตั้งไว้ — ข่าวที่มีคำเหล่านี้ต้องเก็บไว้เสมอ
+    # แม้ไม่เข้า 5 หมวด เพราะผู้ใช้สั่งเฝ้าระวังเอง ถือว่าสำคัญกว่าตัวกรองหมวด
+    watch_words = [k.word.strip().lower() for k in
+                   Keyword.query.filter_by(kind="watch", enabled=True).all() if k.word.strip()]
     new_total, kept = 0, []
     horizon = now() - timedelta(days=current_app.config["ARTICLE_RETENTION_DAYS"])
     for it in items:
@@ -321,15 +325,22 @@ def store_items(src: Source, items: list[dict]) -> tuple[int, int, list[Article]
             continue
         c = classify(it["title"], it["summary"])
         cats = [x for x in c["categories"] if (not allowed or x in allowed)]
-        if keep_only and not cats:
+        text_all = f"{it['title']} {it['summary'] or ''}".lower()
+        hits = [w for w in watch_words if w in text_all]
+        if keep_only and not cats and not hits:
             continue
         art = Article(
             source_id=src.id, guid=it["guid"], url=it["url"][:1000], url_hash=h, title=it["title"][:600],
             summary=it["summary"], image_url=(it["image"] or "")[:1000] or None, author=it["author"],
             published_at=it["published"] or now(), category=(cats[0] if cats else c["primary"]),
             categories=",".join(cats or c["categories"]), level=c["level"], matched_keywords=",".join(c["matched"])[:400],
-            region=src.region,
+            region=src.region, watch_hits=",".join(hits)[:400] or None,
         )
+        if hits:
+            # เจอคำเฝ้าระวัง = แจ้งเตือนเสมอ และยกระดับขึ้นอย่างน้อย "สำคัญ"
+            art.is_alert = True
+            if LEVELS.get(art.level, {}).get("rank", 0) < LEVELS.get("important", {}).get("rank", 0):
+                art.level = "important"
         # แจ้งเตือน: หมวด/คำสำคัญของแหล่งนี้
         alert_cats = set(x for x in (src.alert_categories or "").split(",") if x)
         alert_words = [w.strip().lower() for w in (src.alert_keywords or "").split(",") if w.strip()]

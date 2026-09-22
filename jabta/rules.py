@@ -4,12 +4,48 @@ from datetime import timedelta
 
 from flask import current_app
 
-from .models import db, Story, Pin, Rule, Article, Source, Setting, LEVELS, CATEGORIES, now
+from .models import db, Story, Pin, Rule, Article, Source, Setting, Keyword, LEVELS, CATEGORIES, now
 from .line import push_text
 
 log = logging.getLogger("jabta.rules")
 
 MAX_PINS = 5
+
+
+WATCH_RULE_NAME = "คำเฝ้าระวัง (ระบบจัดการให้)"
+
+
+def sync_watch_rule():
+    """ให้กฎปักหมุดอัตโนมัติสะท้อนรายการคำเฝ้าระวังปัจจุบันเสมอ
+
+    เรียกทุกครั้งที่ผู้ใช้เพิ่ม/ลบคำเฝ้าระวัง กฎนี้ทำให้ข่าวที่มีคำเหล่านั้น
+    ถูกดันขึ้นหมุดอันดับ 1 และส่งแจ้งเตือน LINE โดยไม่ต้องตั้งกฎเอง
+    ตัวกฎยังแก้ได้ตามปกติในหน้าจัดข่าวเด่น แต่ช่องคำจะถูกเขียนทับทุกครั้งที่ซิงก์
+    """
+    words = [k.word.strip() for k in Keyword.query.filter_by(kind="watch", enabled=True).all() if k.word.strip()]
+    rule = Rule.query.filter_by(name=WATCH_RULE_NAME).first()
+    if not words:
+        if rule:
+            rule.enabled = False
+            db.session.commit()
+        return rule
+    if not rule:
+        rule = Rule(name=WATCH_RULE_NAME)
+        db.session.add(rule)
+    joined = ",".join(words)
+    if len(joined) > 500:
+        # ช่อง keywords เก็บได้ 500 ตัวอักษร — บอกให้รู้ว่าคำท้าย ๆ ตกหล่น
+        log.warning("คำเฝ้าระวังยาวเกิน 500 ตัวอักษร คำท้าย ๆ จะไม่ถูกใช้ในกฎปักหมุด (%d คำ)", len(words))
+    rule.keywords = joined[:500]
+    rule.enabled = True
+    rule.category = None          # ทุกหมวด รวมข่าวที่ไม่เข้าหมวดด้วย
+    rule.min_sources = 1          # แหล่งเดียวก็พอ ไม่ต้องรอให้หลายสื่อรายงาน
+    rule.within_hours = 24
+    rule.action = "pin_top"
+    rule.set_level = "essential"
+    rule.notify_line = True
+    db.session.commit()
+    return rule
 
 
 def _story_matches(rule: Rule, story: Story) -> bool:

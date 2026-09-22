@@ -36,6 +36,28 @@ def setup_logging(app: Flask):
         xlog = logging.getLogger("jabta.access"); xlog.addHandler(xh); xlog.propagate = False; xlog.setLevel(logging.INFO)
 
 
+# โปรเจกต์นี้ไม่มี migration tool — create_all() สร้างตารางใหม่ได้แต่ไม่เพิ่ม
+# คอลัมน์ให้ตารางที่มีอยู่แล้ว จึงต้องเติมเองแบบ idempotent ตอนสตาร์ท
+NEW_COLUMNS = [("articles", "watch_hits", "VARCHAR(400)")]
+
+
+def _add_missing_columns():
+    from sqlalchemy import inspect, text
+    try:
+        insp = inspect(db.engine)
+        for table, col, coltype in NEW_COLUMNS:
+            if table not in insp.get_table_names():
+                continue
+            if col in {c["name"] for c in insp.get_columns(table)}:
+                continue
+            db.session.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {coltype}"))
+            db.session.commit()
+            logging.getLogger("jabta").info("เพิ่มคอลัมน์ %s.%s ให้ฐานข้อมูลเดิม", table, col)
+    except Exception as ex:
+        db.session.rollback()
+        logging.getLogger("jabta").warning("เพิ่มคอลัมน์ไม่สำเร็จ: %s", ex)
+
+
 def create_app(config_object=Config) -> Flask:
     app = Flask(__name__, template_folder="templates", static_folder="static")
     app.config.from_object(config_object)
@@ -49,6 +71,7 @@ def create_app(config_object=Config) -> Flask:
 
     with app.app_context():
         db.create_all()
+        _add_missing_columns()
 
     @app.before_request
     def _gate():

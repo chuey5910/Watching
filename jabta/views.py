@@ -12,7 +12,7 @@ from sqlalchemy import func, or_
 from .models import (db, User, Source, Article, Story, Pin, Rule, Keyword, AuditLog, FetchLog, Setting,
                      CATEGORIES, LEVELS, SOURCE_TYPES, now)
 from .security import audit, admin_required, tailscale_identity
-from .rules import pin_story, renumber_pins, MAX_PINS, expire_pins, apply_rules, send_alerts
+from .rules import pin_story, renumber_pins, MAX_PINS, expire_pins, apply_rules, send_alerts, sync_watch_rule
 from .fetcher import run_fetch, fetch_source, domain_of
 from . import classifier
 
@@ -90,6 +90,7 @@ def board():
                     added.append(w)
             if added:
                 db.session.commit()
+                sync_watch_rule()
                 audit("keyword_add", target=",".join(added), detail="เพิ่มจากช่องค้นหาด้วย #")
                 flash("เพิ่มคำเฝ้าระวัง: " + ", ".join(added), "ok")
             if dup:
@@ -97,6 +98,11 @@ def board():
             rest = re.sub(r"#[^\s#]+", " ", q).strip()
             return redirect(url_for("main.board", q=rest or words[0], cat=cat,
                                     h=hours, region=region))
+
+    # ข่าวที่ตรงคำเฝ้าระวัง — หมุดมีได้แค่ 5 อัน ที่เหลือต้องไม่หายไปจากสายตา
+    watch_news = (Article.query.filter(Article.watch_hits.isnot(None), Article.fetched_at >= since,
+                                       Article.hidden.is_(False))
+                  .order_by(Article.published_at.desc()).limit(12).all())
 
     pins = Pin.query.order_by(Pin.position.asc()).all()
     pinned_ids = {p.story_id for p in pins}
@@ -136,7 +142,7 @@ def board():
     last_fetch = db.session.query(func.max(Source.last_fetched_at)).scalar()
     total_articles = Article.query.filter(Article.fetched_at >= since).count()
 
-    return render_template("board.html", pins=pins, hero=hero, hero_articles=hero_articles, hero_first=hero_first,
+    return render_template("board.html", watch_news=watch_news, pins=pins, hero=hero, hero_articles=hero_articles, hero_first=hero_first,
                            ticker=ticker, lanes=lanes, must=must, social=social, social_count=social_count,
                            trending=trending, watch_counts=watch_counts, region_rows=region_rows, region_max=region_max,
                            top_sources=top_sources, total_sources=total_sources, last_fetch=last_fetch,
@@ -443,6 +449,7 @@ def keyword_add():
     w = (request.form.get("word") or "").strip()
     if w and not Keyword.query.filter_by(word=w, kind="watch").first():
         db.session.add(Keyword(word=w, kind="watch")); db.session.commit()
+        sync_watch_rule()
         audit("keyword_add", target=w)
     return redirect(request.referrer or url_for("main.curate"))
 
@@ -453,6 +460,7 @@ def keyword_delete(kid):
     k = db.session.get(Keyword, kid) or abort(404)
     audit("keyword_delete", target=k.word)
     db.session.delete(k); db.session.commit()
+    sync_watch_rule()
     return redirect(request.referrer or url_for("main.curate"))
 
 
