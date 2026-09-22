@@ -1,0 +1,25 @@
+# ห้ามให้ COPY . . ลากของพวกนี้เข้า image
+# .env มี SECRET_KEY — ส่งเข้า container ผ่าน env_file ตอน runtime แทน ไม่ฝังในชั้น image
+.env
+.env.bak
+
+# ข้อมูลและ log จริง — ผูกผ่าน volume ตอน runtime
+data/
+logs/
+*.sqlite3
+
+# venv ของเครื่อง host (ขนาดใหญ่ และ binary คนละแพลตฟอร์มกับ image)
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+
+# ไม่จำเป็นต่อการรัน
+.git/
+.gitignore
+.dockerignore
+docker-compose*.yml
+CLAUDE.md
+scripts/jabta.service
+scripts/com.jabta.board.plist
+.DS_Store

@@ -1,0 +1,31 @@
+# ---------------------------------------------------------------------------
+# สำหรับ NAS ที่ "มี Tailscale container อยู่แล้ว" (เช่น UGREEN DXP4800 Plus)
+#
+# ต่างจาก docker-compose.yml ตรงที่ไม่สร้าง Tailscale sidecar ตัวใหม่
+# แต่ยืมเครือข่ายของ container เดิม → jabta จะใช้ IP เดิมใน Tailnet
+# ไม่เพิ่มโหนดใหม่ และไม่ต้องขอ TS_AUTHKEY
+#
+# วิธีใช้:
+#   1) หาชื่อ container tailscale เดิม:  docker ps | grep -i tailscale
+#   2) ใส่ชื่อนั้นลงใน .env บรรทัด       TS_CONTAINER=ชื่อที่ได้
+#   3) docker compose -f docker-compose.nas.yml up -d --build
+#   4) เปิดให้เข้าผ่าน https (สั่งบน container tailscale เดิม):
+#      docker exec $TS_CONTAINER tailscale serve --bg --https=443 http://127.0.0.1:8085
+#      ถ้าพอร์ต 443 มีบริการอื่นจองอยู่แล้ว ให้เปลี่ยนเป็น --https=8443
+#
+# ข้อควรระวัง: เมื่อ container tailscale รีสตาร์ท เครือข่ายของ jabta จะขาด
+# ต้องสั่ง docker restart jabta ตามทุกครั้ง (Docker ไม่ผูกลำดับให้เองข้าม compose)
+# ---------------------------------------------------------------------------
+services:
+  app:
+    build: .
+    container_name: jabta
+    # ยืม network namespace ของ container tailscale เดิม → ฟังที่ localhost ของตัวนั้น
+    network_mode: "container:${TS_CONTAINER}"
+    env_file: .env
+    environment:
+      - BIND=127.0.0.1:8085
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    restart: unless-stopped
