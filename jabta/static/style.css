@@ -187,9 +187,10 @@ main.center{min-width:0;display:flex;flex-direction:column}
 .src img{width:100%;height:160px;object-fit:cover;border-radius:4px}
 
 
-/* ชิปคำเฝ้าระวัง — มีปุ่มลบเล็ก ๆ ซ่อนไว้ โผล่เมื่อชี้เมาส์ */
-.watchchip{display:inline-flex;align-items:center;gap:6px}
-.watchchip form{display:inline;margin:0}
-.watchchip button{background:none;border:0;color:var(--dim);cursor:pointer;padding:0 2px;font-size:18px;line-height:1;opacity:.35}
-.watchchip:hover button{opacity:1}
+/* ชิปคำเฝ้าระวัง/คำมาแรง — มีปุ่มเล็ก ๆ จาง ๆ ชัดขึ้นเมื่อชี้เมาส์ */
+.watchchip,.trendchip{display:inline-flex;align-items:center;gap:6px}
+.watchchip form,.trendchip form{display:inline;margin:0}
+.watchchip button,.trendchip button{background:none;border:0;color:var(--dim);cursor:pointer;padding:0 2px;font-size:18px;line-height:1;opacity:.35}
+.watchchip:hover button,.trendchip:hover button{opacity:1}
 .watchchip button:hover{color:var(--red)}
+.trendchip button:hover{color:var(--green)}

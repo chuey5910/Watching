@@ -53,19 +53,20 @@
 
     <div class="hr"></div>
     <div class="col">
-      <div class="kicker">คำสำคัญที่พุ่งขึ้นวันนี้</div>
+      <div class="kicker">คำที่เฝ้าระวัง</div>
       <div class="row wrap" style="gap:8px">
-        {% for t in trending %}<a class="chip" href="{{ url_for('main.board', q=t.word) }}">#{{ t.word }} {% if t.pct >= 50 %}<span style="color:var(--red)">↑ {{ t.pct }}%</span>{% else %}<span class="mute">{{ t.count }}</span>{% endif %}</a>{% else %}<span class="small mute">ยังไม่มีข้อมูลพอ</span>{% endfor %}
+        {% for w in watch_counts %}<span class="chip watchchip" style="{{ 'border:1px solid var(--red)' if w.count else '' }}"><a href="{{ url_for('main.board', q=w.word) }}">{{ w.word|tw }} <span class="{{ 'lvl-essential' if w.count else 'mute' }}">{{ w.count }}</span></a><form method="post" action="{{ url_for('main.keyword_delete', kid=w.id) }}" onsubmit="return confirm('เลิกเฝ้าระวังคำว่า {{ w.word }} ?')"><button type="submit" title="เลิกเฝ้าระวัง">&times;</button></form></span>{% else %}<span class="small mute">ยังไม่มีคำเฝ้าระวัง</span>{% endfor %}
       </div>
+      <div class="xs dim">อยู่ถาวรจนกว่าจะกด × — เพิ่มโดยพิมพ์ <b>#คำ</b> ในช่องค้นหาด้านบน</div>
     </div>
-    {% if watch_counts %}
+
     <div class="col">
-      <div class="kicker">คำที่ติดตามพิเศษ</div>
+      <div class="kicker">คำที่พุ่งขึ้นวันนี้ · ระบบจับเอง</div>
       <div class="row wrap" style="gap:8px">
-        {% for w in watch_counts %}<span class="chip watchchip" style="{{ 'border:1px solid var(--red)' if w.count else '' }}"><a href="{{ url_for('main.board', q=w.word) }}">{{ w.word|tw }} <span class="{{ 'lvl-essential' if w.count else 'mute' }}">{{ w.count }}</span></a><form method="post" action="{{ url_for('main.keyword_delete', kid=w.id) }}" onsubmit="return confirm('เลิกเฝ้าระวังคำว่า {{ w.word }} ?')"><button type="submit" title="เลิกเฝ้าระวัง">&times;</button></form></span>{% endfor %}
+        {% for t in trending %}<span class="chip trendchip"><a href="{{ url_for('main.board', q=t.word) }}">{{ t.word|tw }} {% if t.pct >= 50 %}<span style="color:var(--red)">↑ {{ t.pct }}%</span>{% else %}<span class="mute">{{ t.count }}</span>{% endif %}</a><form method="post" action="{{ url_for('main.keyword_add') }}"><input type="hidden" name="word" value="{{ t.word }}"><button type="submit" title="ย้ายมาเฝ้าระวังถาวร">+</button></form></span>{% else %}<span class="small mute">ยังไม่มีข้อมูลพอ</span>{% endfor %}
       </div>
+      <div class="xs dim">เปลี่ยนเองทุกรอบดึงข่าว — กด + เพื่อย้ายมาเฝ้าระวังถาวร</div>
     </div>
-    {% endif %}
 
     <div class="hr"></div>
     <div class="col">
