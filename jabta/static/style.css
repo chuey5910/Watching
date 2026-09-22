@@ -197,5 +197,15 @@ main.center{min-width:0;display:flex;flex-direction:column}
 
 /* การ์ดข่าวที่ตรงคำเฝ้าระวังในแถบซ้าย */
 .watchnews{display:block;padding:10px 12px;border-radius:6px;background:var(--panel);
-           border-left:3px solid var(--red);line-height:1.45}
+           border:2px solid var(--red);line-height:1.45}
 .watchnews:hover{background:var(--panel2);color:var(--ink)}
+
+/* เลนผลค้นหา — ไม่ใช่หมวดใดหมวดหนึ่ง จึงใช้สีเน้นกลาง ๆ */
+.cat-_search{color:var(--ink)} .bcat-_search{border-color:var(--red)}
+
+/* ข่าวที่ตรงคำเฝ้าระวัง — ครอบกรอบแดงให้เห็นชัดจากระยะไกล
+   เพราะนี่คือสิ่งที่ผู้ใช้สั่งเฝ้าระวังเอง สำคัญกว่าทุกอย่างบนกระดาน */
+.watchbox{border:2px solid var(--red) !important;border-radius:6px;position:relative}
+.hero.watchbox{border-radius:0;border-left:0;border-right:0}
+.watchtag{display:inline-block;align-self:flex-start;padding:2px 8px;border-radius:3px;
+          background:var(--red);color:var(--bg);font-size:13px;font-weight:700}

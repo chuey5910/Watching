@@ -35,7 +35,11 @@ def _lane_stories(since, category=None, region=None, q=None, limit=10, exclude_i
     if exclude_ids:
         qs = qs.filter(~Story.id.in_(list(exclude_ids)))
     if q:
-        qs = qs.filter(Story.title.ilike(f"%{q}%"))
+        like = f"%{q}%"
+        sub = (db.session.query(Article.story_id)
+               .filter(db.or_(Article.title.ilike(like), Article.summary.ilike(like)))
+               .subquery())
+        qs = qs.filter(db.or_(Story.title.ilike(like), Story.id.in_(db.session.query(sub.c.story_id))))
     if region:
         sub = db.session.query(Article.story_id).filter(Article.region == region).subquery()
         qs = qs.filter(Story.id.in_(sub))
@@ -60,7 +64,9 @@ def _trending(since):
     # คำที่ติดตามพิเศษนับตรงจากหัวข้อ
     watch_counts = []
     for k in watch:
-        c = Article.query.filter(Article.fetched_at >= since, Article.title.ilike(f"%{k.word}%")).count()
+        like = f"%{k.word}%"
+        c = Article.query.filter(Article.fetched_at >= since,
+                                 db.or_(Article.title.ilike(like), Article.summary.ilike(like))).count()
         # ต้องมี id ด้วย เพราะชิปบนกระดานมีปุ่มเลิกเฝ้าระวัง
         watch_counts.append({"id": k.id, "word": k.word, "count": c})
     return out[:8], watch_counts
@@ -116,10 +122,14 @@ def board():
     ticker = (Article.query.filter(Article.fetched_at >= now() - timedelta(hours=6), Article.level.in_(["essential", "important"]))
               .order_by(Article.published_at.desc()).limit(10).all())
 
-    if cat:
-        lanes = [(cat, _lane_stories(since, cat, region, q, limit=30, exclude_ids=pinned_ids if not q else ()))]
+    if q:
+        # ค้นหา = เลนเดียวรวมทุกหมวด รวมข่าวที่ไม่เข้าหมวดใดเลยด้วย
+        lanes = [("_search", f'ผลค้นหา “{q}”', _lane_stories(since, None, region, q, limit=40))]
+    elif cat:
+        lanes = [(cat, CATEGORIES[cat]["label"], _lane_stories(since, cat, region, q, limit=30, exclude_ids=pinned_ids))]
     else:
-        lanes = [(c, _lane_stories(since, c, region, q, limit=8, exclude_ids=pinned_ids if not q else ())) for c in CATEGORIES]
+        lanes = [(c, CATEGORIES[c]["label"], _lane_stories(since, c, region, q, limit=8, exclude_ids=pinned_ids))
+                 for c in CATEGORIES]
 
     must = {}
     for lvl in LEVELS:
