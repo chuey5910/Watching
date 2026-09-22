@@ -258,6 +258,71 @@ def create_app(config_object=Config) -> Flask:
                 click.echo(f"    >> แนะนำ: {best[2]}" + ("  (เดิมใช้ได้อยู่แล้ว)" if best[1] == "เดิม" else ""))
             click.echo("")
 
+    @app.cli.command("probe-rsshub")
+    @click.option("--fb", default="thairath", help="ชื่อเพจ Facebook ที่ใช้ทดสอบ")
+    @click.option("--x", "xh", default="Reuters", help="บัญชี X ที่ใช้ทดสอบ")
+    @click.option("--tiktok", default="thairath_news", help="บัญชี TikTok ที่ใช้ทดสอบ")
+    @click.option("--ig", default="thairath_news", help="บัญชี Instagram ที่ใช้ทดสอบ")
+    @click.option("--tg", default="thaigov", help="ช่อง Telegram ที่ใช้ทดสอบ")
+    def probe_rsshub_cmd(fb, xh, tiktok, ig, tg):
+        """วัดว่า route ไหนของ RSSHub ใช้ได้จริงบนเครือข่ายนี้
+
+        route ของ Facebook / X / Instagram มักถูกแพลตฟอร์มบล็อกหรือบังคับ login
+        คำสั่งนี้ยิงจริงแล้วรายงานตามผล จะได้ไม่ต้องเดา
+        """
+        import requests
+        from .fetcher import parse_feed
+
+        base = (app.config.get("RSSHUB_BASE") or "").rstrip("/")
+        if not base:
+            click.echo("ยังไม่ได้ตั้ง RSSHUB_BASE ใน .env — ตั้งเป็น http://127.0.0.1:1200 ก่อน")
+            return
+        click.echo(f"RSSHUB_BASE = {base}")
+        try:
+            r = requests.get(base + "/", timeout=20)
+            click.echo(f"ตัว RSSHub เอง: HTTP {r.status_code}\n")
+        except Exception as ex:
+            click.echo(f"ต่อ RSSHub ไม่ได้: {type(ex).__name__} — ตรวจว่า container rsshub รันอยู่ไหม")
+            return
+
+        ROUTES = [
+            ("Facebook เพจ",   f"/facebook/page/{fb}"),
+            ("X (Twitter)",    f"/twitter/user/{xh}"),
+            ("TikTok",         f"/tiktok/user/@{tiktok}"),
+            ("Instagram",      f"/picuki/profile/{ig}"),
+            ("Instagram (ทางการ)", f"/instagram/user/{ig}"),
+            ("Telegram",       f"/telegram/channel/{tg}"),
+            ("YouTube",        f"/youtube/user/@{tiktok}"),
+        ]
+        ok, bad = [], []
+        for label, route in ROUTES:
+            url = base + route
+            try:
+                r = requests.get(url, timeout=45)
+                if r.status_code != 200:
+                    detail = f"HTTP {r.status_code}"
+                    # RSSHub ใส่เหตุผลไว้ในเนื้อหาเวลา route พัง
+                    txt = (r.text or "")[:160].replace("\n", " ")
+                    bad.append((label, route, f"{detail}  {txt}"))
+                    click.echo(f"  ใช้ไม่ได้  {label:22} {detail}")
+                    continue
+                n = len(parse_feed(r.content, url))
+                if n:
+                    ok.append((label, route, n))
+                    click.echo(f"  ใช้ได้     {label:22} {n} รายการ  {route}")
+                else:
+                    bad.append((label, route, "ตอบ 200 แต่ไม่มีรายการ"))
+                    click.echo(f"  ใช้ไม่ได้  {label:22} ตอบ 200 แต่ไม่มีรายการ")
+            except Exception as ex:
+                bad.append((label, route, type(ex).__name__))
+                click.echo(f"  ใช้ไม่ได้  {label:22} {type(ex).__name__}")
+
+        click.echo(f"\nสรุป: ใช้ได้ {len(ok)} · ใช้ไม่ได้ {len(bad)} จาก {len(ROUTES)} route")
+        if bad:
+            click.echo("\nรายละเอียดที่ใช้ไม่ได้:")
+            for label, route, why in bad:
+                click.echo(f"  {label:22} {route}\n      {why}")
+
     @app.cli.command("create-admin")
     @click.argument("username")
     @click.argument("password")

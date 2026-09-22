@@ -29,3 +29,22 @@ services:
       - ./data:/app/data
       - ./logs:/app/logs
     restart: unless-stopped
+
+  # RSSHub — แปลงเพจ/บัญชีโซเชียลที่ไม่มี RSS ทางการให้เป็นฟีด
+  # อยู่ใน network namespace เดียวกับ jabta จึงคุยกันที่ 127.0.0.1:1200 ได้เลย
+  # ไม่เปิดออกนอก Tailnet และไม่ต้อง map port
+  #
+  # หมายเหตุตามจริง: route ของ Facebook / X / Instagram มักถูกแพลตฟอร์มบล็อก
+  # ใช้คำสั่ง `flask probe-rsshub` วัดว่าอันไหนใช้ได้จริงบนเครือข่ายของคุณ
+  rsshub:
+    image: diygod/rsshub:latest
+    container_name: rsshub
+    network_mode: "container:${TS_CONTAINER}"
+    environment:
+      - NODE_ENV=production
+      - PORT=1200
+      - CACHE_TYPE=memory          # ไม่ต้องพึ่ง Redis แยกอีกตัว
+      - CACHE_EXPIRE=900
+      - REQUEST_TIMEOUT=15000
+      - ALLOW_USER_SUPPLY_UNSAFE_DOMAIN=false
+    restart: unless-stopped
