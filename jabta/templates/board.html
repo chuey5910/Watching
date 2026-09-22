@@ -38,7 +38,7 @@
     {% if pins %}
       <div class="col" style="gap:12px">
       {% for p in pins %}
-        <a class="pin {{ 'first' if loop.first }} {{ 'watchbox' if p.story.watch_hits }}" href="{{ url_for('main.story', story_id=p.story_id) }}">
+        <a class="pin {{ 'first' if loop.first }}" href="{{ url_for('main.story', story_id=p.story_id) }}">
           <span class="n">{{ p.position }}</span>
           <span class="col" style="gap:5px">
             <span class="title">{{ p.story.title|tw }}</span>
@@ -60,20 +60,6 @@
       <div class="xs dim">อยู่ถาวรจนกว่าจะกด × — เพิ่มโดยพิมพ์ <b>#คำ</b> ในช่องค้นหาด้านบน</div>
     </div>
 
-    {% if watch_news %}
-    <div class="col">
-      <div class="kicker" style="color:var(--red)">ข่าวที่ตรงคำเฝ้าระวัง · {{ watch_news|length }} ชิ้น</div>
-      <div class="col" style="gap:10px">
-        {% for a in watch_news %}
-        <a href="{{ a.url }}" target="_blank" rel="noopener" class="watchnews">
-          <div class="xs" style="color:var(--red)">{{ a.watch_hits }} · {{ a.published_at|fmt_time }} น.</div>
-          <div class="small">{{ a.display_title[:90]|tw }}{% if a.display_title|length > 90 %}…{% endif %}</div>
-          <div class="xs dim">{{ a.source.name }}</div>
-        </a>
-        {% endfor %}
-      </div>
-    </div>
-    {% endif %}
 
     <div class="col">
       <div class="kicker">คำที่พุ่งขึ้นวันนี้ · ระบบจับเอง</div>
@@ -98,7 +84,7 @@
   <!-- กลาง -->
   <main class="center">
     {% if hero %}
-    <section class="hero {{ 'watchbox' if hero and hero.watch_hits }}">
+    <section class="hero">
       <div class="col" style="gap:16px">
         <div class="row wrap">
           {% if pins and pins[0].story_id == hero.id %}<span class="tag fill" style="background:var(--red)">ปักหมุด #1</span>{% else %}<span class="tag" style="border:1px solid var(--line2);color:var(--mute)">ต้องรู้ตอนนี้</span>{% endif %}{% if hero.watch_hits %}<span class="tag fill" style="background:var(--red)">คำเฝ้าระวัง: {{ hero.watch_hits }}</span>{% endif %}
@@ -148,7 +134,49 @@
         {% if q or region %}<a class="pill" style="border-color:var(--red);color:var(--red)" href="{{ url_for('main.board') }}">ล้างตัวกรอง{% if q %} “{{ q }}”{% endif %}{% if region %} · {{ region }}{% endif %} ✕</a>{% endif %}
       </div>
 
-      <div class="lanes {{ 'single' if cat or q }}">
+      {% if q %}
+      <div class="lanes single" style="padding-bottom:6px">
+        <div class="lane">
+          <div class="lane-head" style="border-color:var(--red)">
+            <h2>ผลค้นหา “{{ q }}”</h2>
+            <span class="small mute">{{ search_stories|length }} เรื่อง</span>
+          </div>
+          {% for s in search_stories %}
+          <div class="item">
+            {% if s.watch_hits %}<span class="watchtag">{{ s.watch_hits }}</span>{% endif %}
+            <a class="title" href="{{ url_for('main.story', story_id=s.id) }}">{{ s.title|tw }}</a>
+            <span class="meta">{% for src in s.source_names(2) %}{{ srcname(src) }}{% if not loop.last %} · {% endif %}{% endfor %}{% if s.source_count > 2 %} · +{{ s.source_count - 2 }} แหล่ง{% endif %} · {{ s.last_seen_at|ago }}{% if s.level in ('essential','important') %} · <span class="lvl-{{ s.level }}">{{ LEVELS[s.level].label }}</span>{% endif %}</span>
+            <button class="pinbtn" data-pin="{{ s.id }}">📌 ปักหมุด</button>
+          </div>
+          {% else %}
+          <span class="small mute">ไม่พบข่าวที่ตรงคำนี้ในช่วงเวลาที่เลือก</span>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      {% if watch_stories %}
+      <div class="lanes single" style="padding-bottom:6px">
+        <div class="lane">
+          <div class="lane-head" style="border-color:var(--red)">
+            <h2 style="color:var(--red)">ข่าวที่ตรงคำเฝ้าระวัง</h2>
+            <span class="small mute">{{ watch_stories|length }} เรื่อง</span>
+          </div>
+          <div class="watchgrid">
+            {% for s in watch_stories %}
+            <div class="item">
+              <span class="watchtag">{{ s.watch_hits }}</span>
+              <a class="title" href="{{ url_for('main.story', story_id=s.id) }}">{{ s.title|tw }}</a>
+              <span class="meta">{% for src in s.source_names(2) %}{{ srcname(src) }}{% if not loop.last %} · {% endif %}{% endfor %} · {{ s.last_seen_at|ago }}{% if s.level in ('essential','important') %} · <span class="lvl-{{ s.level }}">{{ LEVELS[s.level].label }}</span>{% endif %}</span>
+              <button class="pinbtn" data-pin="{{ s.id }}">📌 ปักหมุด</button>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="lanes {{ 'single' if cat }}">
         {% for k, label, stories in lanes %}
         <div class="lane">
           <div class="lane-head bcat-{{ k }}">
@@ -156,15 +184,15 @@
             <span class="small mute">{{ stories|length }} เรื่อง</span>
           </div>
           {% for s in stories %}
-            {% if loop.first and not cat and not q %}
-            <div class="card {{ 'hot' if s.level == 'essential' }} {{ 'watchbox' if s.watch_hits }}">
+            {% if loop.first and not cat %}
+            <div class="card {{ 'hot' if s.level == 'essential' }}">
               <span class="meta cat-{{ k }}" style="font-weight:600">{% if s.watch_hits %}<span style="color:var(--red)">● {{ s.watch_hits }}</span> · {% endif %}{{ LEVELS[s.level].label }}{% if s.local_first %} · <span style="color:var(--gold)">ท้องถิ่นรายงานก่อน</span>{% endif %} · {{ s.last_seen_at|ago }}</span>
               <a class="title" href="{{ url_for('main.story', story_id=s.id) }}">{{ s.title|tw }}</a>
               <span class="meta">{% for src in s.source_names(3) %}{{ srcname(src) }}{% if not loop.last %} · {% endif %}{% endfor %}{% if s.source_count > 3 %} · +{{ s.source_count - 3 }}{% endif %}</span>
               <button class="pinbtn" data-pin="{{ s.id }}">📌 ปักหมุด</button>
             </div>
             {% else %}
-            <div class="item {{ 'watchbox' if s.watch_hits }}">
+            <div class="item">
               {% if s.watch_hits %}<span class="watchtag">{{ s.watch_hits }}</span>{% endif %}
               <a class="title" href="{{ url_for('main.story', story_id=s.id) }}">{{ s.title|tw }}</a>
               <span class="meta">{% for src in s.source_names(2) %}{{ srcname(src) }}{% if not loop.last %} · {% endif %}{% endfor %}{% if s.source_count > 2 %} · +{{ s.source_count - 2 }} แหล่ง{% endif %} · {{ s.last_seen_at|ago }}{% if s.level in ('essential','important') %} · <span class="lvl-{{ s.level }}">{{ LEVELS[s.level].label }}</span>{% endif %}</span>

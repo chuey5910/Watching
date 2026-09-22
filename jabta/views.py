@@ -105,10 +105,11 @@ def board():
             return redirect(url_for("main.board", q=rest or words[0], cat=cat,
                                     h=hours, region=region))
 
-    # ข่าวที่ตรงคำเฝ้าระวัง — หมุดมีได้แค่ 5 อัน ที่เหลือต้องไม่หายไปจากสายตา
-    watch_news = (Article.query.filter(Article.watch_hits.isnot(None), Article.fetched_at >= since,
-                                       Article.hidden.is_(False))
-                  .order_by(Article.published_at.desc()).limit(12).all())
+    # ข่าวที่ตรงคำเฝ้าระวัง — ดึงขึ้นเป็นแถบบนสุดเหนือเลนหมวด
+    # หมุดมีได้แค่ 5 อัน ที่เหลือต้องไม่หายไปจากสายตา และเลนหมวดด้านล่างยังต้องอยู่ครบ
+    # เพื่อให้ยังเห็นความเคลื่อนไหวอย่างอื่นด้วย
+    watch_stories = (Story.query.filter(Story.watch_hits.isnot(None), Story.last_seen_at >= since)
+                     .order_by(Story.score.desc(), Story.last_seen_at.desc()).limit(12).all())
 
     pins = Pin.query.order_by(Pin.position.asc()).all()
     pinned_ids = {p.story_id for p in pins}
@@ -122,13 +123,15 @@ def board():
     ticker = (Article.query.filter(Article.fetched_at >= now() - timedelta(hours=6), Article.level.in_(["essential", "important"]))
               .order_by(Article.published_at.desc()).limit(10).all())
 
-    if q:
-        # ค้นหา = เลนเดียวรวมทุกหมวด รวมข่าวที่ไม่เข้าหมวดใดเลยด้วย
-        lanes = [("_search", f'ผลค้นหา “{q}”', _lane_stories(since, None, region, q, limit=40))]
-    elif cat:
-        lanes = [(cat, CATEGORIES[cat]["label"], _lane_stories(since, cat, region, q, limit=30, exclude_ids=pinned_ids))]
+    # ผลค้นหาเป็นแถบแยกต่างหาก ไม่ไปแทนที่เลนหมวด
+    # เลนหมวดคือภาพรวมความเคลื่อนไหวทั้งหมด ถ้าถูกกรองตามคำค้นจะมองไม่เห็นเรื่องอื่นเลย
+    search_stories = _lane_stories(since, None, region, q, limit=40) if q else []
+    if cat:
+        lanes = [(cat, CATEGORIES[cat]["label"],
+                  _lane_stories(since, cat, region, None, limit=30, exclude_ids=pinned_ids))]
     else:
-        lanes = [(c, CATEGORIES[c]["label"], _lane_stories(since, c, region, q, limit=8, exclude_ids=pinned_ids))
+        lanes = [(c, CATEGORIES[c]["label"],
+                  _lane_stories(since, c, region, None, limit=8, exclude_ids=pinned_ids))
                  for c in CATEGORIES]
 
     must = {}
@@ -152,7 +155,7 @@ def board():
     last_fetch = db.session.query(func.max(Source.last_fetched_at)).scalar()
     total_articles = Article.query.filter(Article.fetched_at >= since).count()
 
-    return render_template("board.html", watch_news=watch_news, pins=pins, hero=hero, hero_articles=hero_articles, hero_first=hero_first,
+    return render_template("board.html", search_stories=search_stories, watch_stories=watch_stories, pins=pins, hero=hero, hero_articles=hero_articles, hero_first=hero_first,
                            ticker=ticker, lanes=lanes, must=must, social=social, social_count=social_count,
                            trending=trending, watch_counts=watch_counts, region_rows=region_rows, region_max=region_max,
                            top_sources=top_sources, total_sources=total_sources, last_fetch=last_fetch,
