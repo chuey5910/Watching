@@ -10,7 +10,7 @@
   --display:'Chonburi',serif; --body:'IBM Plex Sans Thai',system-ui,sans-serif;
 }
 *{box-sizing:border-box}
-html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:19px;line-height:1.5}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:19px;line-height:1.5;min-width:1440px}
 a{color:inherit;text-decoration:none}a:hover{color:var(--gold)}
 button,input,select,textarea{font-family:inherit;font-size:18px;color:var(--ink)}
 input,select,textarea{background:var(--bg);border:1px solid var(--line2);border-radius:4px;padding:10px 12px;width:100%}
@@ -184,12 +184,3 @@ main.center{min-width:0;display:flex;flex-direction:column}
 .src{display:flex;flex-direction:column;gap:6px;padding:14px;border-radius:6px;background:var(--panel)}
 .src img{width:100%;height:160px;object-fit:cover;border-radius:4px}
 
-@media (max-width:1320px){
-  .board{grid-template-columns:1fr}.rail.left,.rail.right{border:0;padding:24px 24px}
-  .hero{grid-template-columns:1fr;padding:24px}.lanes{grid-template-columns:1fr;padding:16px 24px}.must{grid-template-columns:1fr;margin:0 24px 24px}
-  .split,.split.rev{grid-template-columns:1fr}.split aside,.split.rev aside{border:0;padding:24px}.split main{padding:24px}
-  .masthead{padding:16px 24px}.ticker .label{padding-left:24px}
-  .auth{grid-template-columns:1fr}.auth .art{display:none}.auth .form{padding:32px 24px}
-  .pinrow{grid-template-columns:28px 40px minmax(0,1fr) 44px}.pinrow .field{display:none}
-  .srcs{grid-template-columns:1fr;padding:16px 24px}.story-head{padding:24px}
-}
