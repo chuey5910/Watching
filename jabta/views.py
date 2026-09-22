@@ -1,5 +1,6 @@
 """หน้าเว็บหลัก: กระดานข่าว, แหล่งข่าว, จัดข่าวเด่น, ผู้ดูแล, log"""
 import logging
+import re
 import secrets
 from collections import Counter, defaultdict
 from datetime import timedelta
@@ -49,7 +50,7 @@ def _trending(since):
         cur.update(w for w in (kw or "").split(",") if len(w) >= 3)
     for kw, in db.session.query(Article.matched_keywords).filter(Article.fetched_at >= prev, Article.fetched_at < since):
         old.update(w for w in (kw or "").split(",") if len(w) >= 3)
-    watch = [k.word for k in Keyword.query.filter_by(kind="watch", enabled=True).all()]
+    watch = Keyword.query.filter_by(kind="watch", enabled=True).order_by(Keyword.id.asc()).all()
     out = []
     for w, c in cur.most_common(40):
         o = old.get(w, 0)
@@ -58,9 +59,10 @@ def _trending(since):
     out.sort(key=lambda x: (-x["pct"], -x["count"]))
     # คำที่ติดตามพิเศษนับตรงจากหัวข้อ
     watch_counts = []
-    for w in watch:
-        c = Article.query.filter(Article.fetched_at >= since, Article.title.ilike(f"%{w}%")).count()
-        watch_counts.append({"word": w, "count": c})
+    for k in watch:
+        c = Article.query.filter(Article.fetched_at >= since, Article.title.ilike(f"%{k.word}%")).count()
+        # ต้องมี id ด้วย เพราะชิปบนกระดานมีปุ่มเลิกเฝ้าระวัง
+        watch_counts.append({"id": k.id, "word": k.word, "count": c})
     return out[:8], watch_counts
 
 
@@ -73,6 +75,28 @@ def board():
     cat = request.args.get("cat") or None
     q = (request.args.get("q") or "").strip() or None
     region = request.args.get("region") or None
+
+    # พิมพ์ #คำ ในช่องค้นหา = เพิ่มคำนั้นเข้ารายการเฝ้าระวัง แล้วค้นหาด้วยคำนั้นต่อ
+    # ใส่หลายคำในครั้งเดียวได้ เช่น "#เหมืองแร่ #ไล่รื้อ"
+    if q and "#" in q:
+        words = [w.strip() for w in re.findall(r"#([^\s#]+)", q) if w.strip()]
+        if words:
+            added, dup = [], []
+            for w in words:
+                if Keyword.query.filter_by(word=w, kind="watch").first():
+                    dup.append(w)
+                else:
+                    db.session.add(Keyword(word=w, kind="watch"))
+                    added.append(w)
+            if added:
+                db.session.commit()
+                audit("keyword_add", target=",".join(added), detail="เพิ่มจากช่องค้นหาด้วย #")
+                flash("เพิ่มคำเฝ้าระวัง: " + ", ".join(added), "ok")
+            if dup:
+                flash("มีอยู่แล้ว: " + ", ".join(dup), "")
+            rest = re.sub(r"#[^\s#]+", " ", q).strip()
+            return redirect(url_for("main.board", q=rest or words[0], cat=cat,
+                                    h=hours, region=region))
 
     pins = Pin.query.order_by(Pin.position.asc()).all()
     pinned_ids = {p.story_id for p in pins}

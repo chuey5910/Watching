@@ -4,7 +4,7 @@
 {% block search %}
 <form class="search" method="get" action="{{ url_for('main.board') }}">
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
-  <input type="search" name="q" value="{{ q or '' }}" placeholder="ค้นหาข่าว / คำสำคัญ" aria-label="ค้นหา">
+  <input type="search" name="q" value="{{ q or '' }}" placeholder="ค้นหาข่าว · พิมพ์ #คำ เพื่อเฝ้าระวัง" aria-label="ค้นหาข่าว หรือพิมพ์ #คำ เพื่อเพิ่มคำเฝ้าระวัง">
   {% if cat %}<input type="hidden" name="cat" value="{{ cat }}">{% endif %}
 </form>
 {% endblock %}
@@ -62,7 +62,7 @@
     <div class="col">
       <div class="kicker">คำที่ติดตามพิเศษ</div>
       <div class="row wrap" style="gap:8px">
-        {% for w in watch_counts %}<a class="chip" href="{{ url_for('main.board', q=w.word) }}" style="{{ 'border:1px solid var(--red)' if w.count else '' }}">{{ w.word }} <span class="{{ 'lvl-essential' if w.count else 'mute' }}">{{ w.count }}</span></a>{% endfor %}
+        {% for w in watch_counts %}<span class="chip watchchip" style="{{ 'border:1px solid var(--red)' if w.count else '' }}"><a href="{{ url_for('main.board', q=w.word) }}">{{ w.word|tw }} <span class="{{ 'lvl-essential' if w.count else 'mute' }}">{{ w.count }}</span></a><form method="post" action="{{ url_for('main.keyword_delete', kid=w.id) }}" onsubmit="return confirm('เลิกเฝ้าระวังคำว่า {{ w.word }} ?')"><button type="submit" title="เลิกเฝ้าระวัง">&times;</button></form></span>{% endfor %}
       </div>
     </div>
     {% endif %}
