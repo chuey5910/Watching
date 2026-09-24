@@ -257,7 +257,10 @@
     <div class="hr"></div>
     <form method="post" action="{{ url_for('main.fetch_now') }}" class="col" style="gap:6px">
       <button class="btn" style="justify-content:center">↻ ดึงข่าวตอนนี้</button>
-      <span class="xs mute" style="text-align:center">อัตโนมัติทุก {{ config.FETCH_INTERVAL_MINUTES }} นาที · ล่าสุด {{ last_fetch|ago }}</span>
+      {% set overdue = fetch_overdue_min and fetch_overdue_min > config.FETCH_INTERVAL_MINUTES * 2 %}
+      <span class="xs {{ 'lvl-essential' if overdue else 'mute' }}" style="text-align:center">
+        {% if overdue %}⚠ หยุดดึงข่าวไป {{ fetch_overdue_min }} นาที (ควรทุก {{ config.FETCH_INTERVAL_MINUTES }} นาที){% else %}อัตโนมัติทุก {{ config.FETCH_INTERVAL_MINUTES }} นาที · ล่าสุด {{ last_fetch|ago }}{% endif %}
+      </span>
     </form>
   </aside>
 </div>

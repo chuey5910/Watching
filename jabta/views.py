@@ -153,9 +153,11 @@ def board():
                    .group_by(Source.id).order_by(func.count(Article.id).desc()).limit(6).all())
     total_sources = Source.query.filter_by(enabled=True).count()
     last_fetch = db.session.query(func.max(Source.last_fetched_at)).scalar()
+    # กระดานเฝ้าระวังที่หยุดดึงข่าวเงียบ ๆ อันตรายกว่ากระดานที่ว่าง เพราะดูเหมือนปกติ
+    fetch_overdue_min = int((now() - last_fetch).total_seconds() // 60) if last_fetch else None
     total_articles = Article.query.filter(Article.fetched_at >= since).count()
 
-    return render_template("board.html", search_stories=search_stories, watch_stories=watch_stories, pins=pins, hero=hero, hero_articles=hero_articles, hero_first=hero_first,
+    return render_template("board.html", fetch_overdue_min=fetch_overdue_min, search_stories=search_stories, watch_stories=watch_stories, pins=pins, hero=hero, hero_articles=hero_articles, hero_first=hero_first,
                            ticker=ticker, lanes=lanes, must=must, social=social, social_count=social_count,
                            trending=trending, watch_counts=watch_counts, region_rows=region_rows, region_max=region_max,
                            top_sources=top_sources, total_sources=total_sources, last_fetch=last_fetch,
