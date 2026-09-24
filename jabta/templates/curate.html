@@ -6,7 +6,7 @@
   <main>
     <div class="row between wrap" style="align-items:flex-end">
       <div class="col" style="gap:6px">
-        <h2 style="font-size:24px">ข่าวที่ปักหมุดอยู่ตอนนี้ <span class="mute" style="font-size:16px;font-family:var(--body)">({{ pins|length }}/{{ max_pins }})</span></h2>
+        <h2 style="font-size:24px">ข่าวที่ปักหมุดอยู่ตอนนี้ <span class="mute" style="font-size:16px;font-family:var(--body)">({{ pins|length }}{% if max_pins > 0 %}/{{ max_pins }}{% endif %})</span></h2>
         <p class="small mute" style="margin:0;line-height:1.5">ลากเพื่อสลับลำดับ · อันดับ 1 ขึ้นเป็นข่าวใหญ่บนสุดของกระดาน · ตั้งเวลาปลดหมุดอัตโนมัติและระดับความจำเป็นได้ทีละข่าว</p>
       </div>
       <a class="btn danger" href="{{ url_for('main.board') }}">+ ปักหมุดจากกระดาน</a>
@@ -32,7 +32,7 @@
         <button class="iconbtn" data-pin="{{ p.story_id }}" data-unpin="1" aria-label="ปลดหมุด" title="ปลดหมุด"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
       </div>
       {% endfor %}
-      {% if pins|length < max_pins %}<div class="dropzone">ว่างอีก {{ max_pins - pins|length }} ตำแหน่ง · กด “ปักหมุด” บนการ์ดข่าวใดก็ได้ในกระดาน หรือเลือกจากรายการแนะนำด้านล่าง</div>{% endif %}
+      {% if max_pins <= 0 or pins|length < max_pins %}<div class="dropzone">{% if max_pins > 0 %}ว่างอีก {{ max_pins - pins|length }} ตำแหน่ง · {% endif %}กด “ปักหมุด” บนการ์ดข่าวใดก็ได้ในกระดาน หรือเลือกจากรายการแนะนำด้านล่าง</div>{% endif %}
     </div>
 
     <div class="col" style="gap:12px;margin-top:8px">

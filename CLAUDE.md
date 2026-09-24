@@ -58,7 +58,7 @@ jabta/
     ├── fetcher.py         run_fetch() ขนานด้วย ThreadPool → fetch_source() ตามชนิด → store_items() (classify + dedupe + cluster + alert flag)
     ├── classifier.py      keyword-based: DEFAULT_KEYWORDS 5 หมวด (ไทย+อังกฤษ), ESSENTIAL/IMPORTANT/NOISE words, classify() → categories/primary/level/matched
     ├── cluster.py         normalize() + character-trigram Jaccard + containment → assign_story() / refresh_story() (source_count, local_first, score)
-    ├── rules.py           pin_story(), renumber_pins() (MAX_PINS=5), apply_rules(), expire_pins(), send_alerts(), morning_brief_text()
+    ├── rules.py           pin_story(), renumber_pins() (เพดานจาก MAX_PINS, 0 = ไม่จำกัด), apply_rules(), expire_pins(), send_alerts(), morning_brief_text()
     ├── scheduler.py       APScheduler: fetch_job ทุก FETCH_INTERVAL_MINUTES, morning brief cron
     ├── line.py            push_text() ผ่าน LINE Messaging API (เงียบถ้าไม่ตั้ง token)
     ├── seed_sources.py    รายชื่อสื่อ 148 แหล่ง + DEFAULT_RULES 4 ข้อ + DEFAULT_WATCH คำสำคัญ
@@ -89,7 +89,7 @@ jabta/
 | `sources` | แหล่งข่าว/บัญชี | `source_type`: mainstream/local/foreign/government/social · `fetch_kind`: rss/html/gnews/gnews_query/telegram/youtube/bluesky/rsshub · `feed_url` มีความหมายต่างกันตาม kind (RSS url / โดเมน / คำค้น / channel id) · `resolved_feed_url` = url ที่ค้นพบ/fallback จริง · `categories` (คั่น ,) หมวดที่ให้เก็บ · `keep_all` ข้ามการกรอง · `alert_categories`/`alert_keywords` → `Article.is_alert` · `group_name` กลุ่มบัญชี (ใช้กับกฎ) · `etag`/`modified` conditional GET |
 | `articles` | ข่าวรายชิ้น | `url_hash` sha1(canonical_url) unique = dedupe · `category` หลัก + `categories` ทั้งหมด · `level` · `matched_keywords` · `story_id` |
 | `stories` | กลุ่มข่าวเรื่องเดียวกัน | `source_count`, `social_count`, `local_first` (ท้องถิ่น/บุคคลรายงานก่อนสื่อหลัก ≥2 ชม.), `watch_hits` คำเฝ้าระวังที่เจอในกลุ่ม, `score` (จัดอันดับ), `level` = สูงสุดในกลุ่ม, `title` เอาจากสื่อหลัก/รัฐก่อน · **`score` ใช้ตรรกะเฝ้าระวัง ไม่ใช่ตรรกะข่าว** — `source_count` ไม่มีน้ำหนักเลย เพราะวัดความดังของข่าว ไม่ได้วัดความสำคัญต่อการเฝ้าระวัง ปรับน้ำหนักที่ `cluster.W_*` |
-| `pins` | หมุด | unique ต่อ story · `position` 1..5 · `auto_unpin`: idle12h/idle24h/tomorrow06/never · `pinned_by_id` (คน) หรือ `pinned_by_rule_id` (กฎ) |
+| `pins` | หมุด | unique ต่อ story · `position` เรียง 1..n (ไม่จำกัดจำนวนแล้ว ตั้งเพดานได้ที่ `MAX_PINS` ใน .env, 0 = ไม่จำกัด) · `auto_unpin`: idle12h/idle24h/tomorrow06/never · `pinned_by_id` (คน) หรือ `pinned_by_rule_id` (กฎ) |
 | `rules` | กฎอัตโนมัติ | เงื่อนไข: category, min_sources, within_hours, keywords, source_type, source_group → action: pin/pin_top/flag (+notify_line, set_level) · `hits` |
 | `keywords` | `kind=watch` คำที่ติดตามพิเศษ (แสดงบนกระดาน) · `kind=classify` คำเพิ่ม/ปิดสำหรับตัวจัดหมวด (มี UI เฉพาะ watch; classify แก้ผ่าน DB/โค้ด) |
 | `audit_logs` | เหตุการณ์ผู้ใช้ | action, target, detail, ip (จริง), tailscale_login, user_agent, ok |

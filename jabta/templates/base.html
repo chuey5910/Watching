@@ -49,8 +49,16 @@ document.addEventListener('click', async (e)=>{
   const b=e.target.closest('[data-pin]'); if(!b) return;
   e.preventDefault(); b.disabled=true;
   const id=b.dataset.pin, un=b.dataset.unpin==='1';
-  const r=await postForm(un?`/unpin/${id}`:`/pin/${id}`,{top:b.dataset.top||'0'});
-  if(r.ok) location.reload(); else {b.disabled=false; alert('ทำรายการไม่สำเร็จ')}
+  try{
+    const r=await postForm(un?`/unpin/${id}`:`/pin/${id}`,{top:b.dataset.top||'0'});
+    if(r && r.ok){location.reload(); return}
+    // เซิร์ฟเวอร์ปฏิเสธพร้อมเหตุผล (เช่น หมุดเต็ม) ต้องบอกผู้ใช้ ไม่ใช่เงียบ
+    alert((r && r.message) || 'ทำรายการไม่สำเร็จ');
+  }catch(err){
+    // เดิมถ้าเซิร์ฟเวอร์ตอบ HTML แทน JSON จะโยน error ตรงนี้แล้วปุ่มค้างถาวร
+    alert('ทำรายการไม่สำเร็จ — ลองรีเฟรชหน้าแล้วทำใหม่');
+  }
+  b.disabled=false;
 });
 </script>
 {% block scripts %}{% endblock %}

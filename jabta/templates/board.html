@@ -15,11 +15,13 @@
 
 {% if ticker %}
 <div class="ticker">
-  <div class="label"><span class="dot" style="background:var(--bg)"></span>ด่วน</div>
+  <div class="label"><span class="dot" style="background:var(--bg)"></span>{{ ticker_label }}</div>
   <div class="items">
     <div class="ticker-track">
-      {% for a in ticker %}<span><a href="{{ a.url }}" target="_blank" rel="noopener">{{ a.published_at|fmt_time }} · {{ a.display_title|tw }} — {{ a.source.name }}</a></span><span class="sep">|</span>{% endfor %}
-      {% for a in ticker %}<span><a href="{{ a.url }}" target="_blank" rel="noopener">{{ a.published_at|fmt_time }} · {{ a.display_title|tw }} — {{ a.source.name }}</a></span><span class="sep">|</span>{% endfor %}
+      {# ทำซ้ำให้ยาวพอเลื่อนได้ต่อเนื่อง — ข่าวเฝ้าระวังมักมีไม่กี่ชิ้น ถ้าซ้ำแค่สองรอบจะเห็นช่องว่าง #}
+      {% for _ in range(2 if ticker|length >= 6 else 6) %}
+      {% for a in ticker %}<span>{% if a.watch_hits %}<b style="color:var(--bg);background:var(--red);padding:1px 6px;border-radius:3px">{{ a.watch_hits }}</b> {% endif %}<a href="{{ a.url }}" target="_blank" rel="noopener">{{ a.published_at|fmt_time }} · {{ a.display_title|tw }} — {{ a.source.name }}</a></span><span class="sep">|</span>{% endfor %}
+      {% endfor %}
     </div>
   </div>
 </div>
@@ -55,9 +57,9 @@
     <div class="col">
       <div class="kicker">คำที่เฝ้าระวัง</div>
       <div class="row wrap" style="gap:8px">
-        {% for w in watch_counts %}<span class="chip watchchip" style="{{ 'border:1px solid var(--red)' if w.count else '' }}"><a href="{{ url_for('main.board', q=w.word) }}">{{ w.word|tw }} <span class="{{ 'lvl-essential' if w.count else 'mute' }}">{{ w.count }}</span></a><form method="post" action="{{ url_for('main.keyword_delete', kid=w.id) }}" onsubmit="return confirm('เลิกเฝ้าระวังคำว่า {{ w.word }} ?')"><button type="submit" title="เลิกเฝ้าระวัง">&times;</button></form></span>{% else %}<span class="small mute">ยังไม่มีคำเฝ้าระวัง</span>{% endfor %}
+        {% for w in watch_counts %}{% set on = w.word in wsel %}{% set nxt = (wsel | reject('equalto', w.word) | list) if on else (wsel + [w.word]) %}<span class="chip watchchip {{ 'sel' if on }}" style="{{ 'border:1px solid var(--red)' if w.count and not on else '' }}"><a href="{{ url_for('main.board', w=nxt|join(','), h=hours, region=region) }}" title="{{ 'เอาคำนี้ออกจากตัวกรอง' if on else 'เพิ่มคำนี้เข้าตัวกรอง (เลือกได้หลายคำ)' }}">{{ w.word|tw }} <span class="{{ 'lvl-essential' if w.count and not on else 'mute' }}">{{ w.count }}</span></a><form method="post" action="{{ url_for('main.keyword_delete', kid=w.id) }}" onsubmit="return confirm('เลิกเฝ้าระวังคำว่า {{ w.word }} ?')"><button type="submit" title="เลิกเฝ้าระวัง">&times;</button></form></span>{% else %}<span class="small mute">ยังไม่มีคำเฝ้าระวัง</span>{% endfor %}
       </div>
-      <div class="xs dim">อยู่ถาวรจนกว่าจะกด × — เพิ่มโดยพิมพ์ <b>#คำ</b> ในช่องค้นหาด้านบน</div>
+      <div class="xs dim">กดที่คำเพื่อใช้เป็นตัวกรอง เลือกพร้อมกันได้หลายคำ · กด × เพื่อเลิกเฝ้าระวัง · เพิ่มโดยพิมพ์ <b>#คำ</b> ในช่องค้นหาด้านบน</div>
     </div>
 
 
@@ -131,14 +133,14 @@
         {% for k, c in CATEGORIES.items() %}<a class="pill {{ 'on' if cat == k }} {{ 'bcat-'+k+' cat-'+k if cat != k }}" href="{{ url_for('main.board', cat=k, q=q, h=hours, region=region) }}">{{ c.label }}</a>{% endfor %}
         <span class="grow"></span>
         {% for hh, lab in [(6,'6 ชม.'),(24,'24 ชม.'),(72,'3 วัน'),(168,'7 วัน')] %}<a class="pill {{ 'on' if hours == hh }}" href="{{ url_for('main.board', cat=cat, q=q, h=hh, region=region) }}">{{ lab }}</a>{% endfor %}
-        {% if q or region %}<a class="pill" style="border-color:var(--red);color:var(--red)" href="{{ url_for('main.board') }}">ล้างตัวกรอง{% if q %} “{{ q }}”{% endif %}{% if region %} · {{ region }}{% endif %} ✕</a>{% endif %}
+        {% if q or region or wsel %}<a class="pill" style="border-color:var(--red);color:var(--red)" href="{{ url_for('main.board') }}">ล้างตัวกรอง{% if q %} “{{ q }}”{% endif %}{% if wsel %} “{{ wsel|join('” “') }}”{% endif %}{% if region %} · {{ region }}{% endif %} ✕</a>{% endif %}
       </div>
 
-      {% if q %}
+      {% if q or wsel %}
       <div class="lanes single" style="padding-bottom:6px">
         <div class="lane">
           <div class="lane-head" style="border-color:var(--red)">
-            <h2>ผลค้นหา “{{ q }}”</h2>
+            <h2>{% if wsel %}กรองด้วยคำเฝ้าระวัง: {{ wsel|join(' + ') }}{% if q %} + “{{ q }}”{% endif %}{% else %}ผลค้นหา “{{ q }}”{% endif %}</h2>
             <span class="small mute">{{ search_stories|length }} เรื่อง</span>
           </div>
           {% for s in search_stories %}

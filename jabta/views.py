@@ -12,7 +12,7 @@ from sqlalchemy import func, or_
 from .models import (db, User, Source, Article, Story, Pin, Rule, Keyword, AuditLog, FetchLog, Setting,
                      CATEGORIES, LEVELS, SOURCE_TYPES, now)
 from .security import audit, admin_required, tailscale_identity
-from .rules import pin_story, renumber_pins, MAX_PINS, expire_pins, apply_rules, send_alerts, sync_watch_rule
+from .rules import pin_story, renumber_pins, max_pins, expire_pins, apply_rules, send_alerts, sync_watch_rule
 from .fetcher import run_fetch, fetch_source, domain_of
 from . import classifier
 
@@ -28,18 +28,25 @@ def _hours():
         return 24
 
 
-def _lane_stories(since, category=None, region=None, q=None, limit=10, exclude_ids=()):
+def _lane_stories(since, category=None, region=None, q=None, limit=10, exclude_ids=(), words=None):
     qs = Story.query.filter(Story.last_seen_at >= since)
     if category:
         qs = qs.filter(Story.category == category)
     if exclude_ids:
         qs = qs.filter(~Story.id.in_(list(exclude_ids)))
+    terms = [t for t in (words or []) if t]
     if q:
-        like = f"%{q}%"
-        sub = (db.session.query(Article.story_id)
-               .filter(db.or_(Article.title.ilike(like), Article.summary.ilike(like)))
-               .subquery())
-        qs = qs.filter(db.or_(Story.title.ilike(like), Story.id.in_(db.session.query(sub.c.story_id))))
+        terms.append(q)
+    if terms:
+        # หลายคำเชื่อมด้วย "หรือ" — เลือกคำเฝ้าระวังพร้อมกันได้หลายคำ
+        conds = []
+        for t in terms:
+            like = f"%{t}%"
+            sub = (db.session.query(Article.story_id)
+                   .filter(db.or_(Article.title.ilike(like), Article.summary.ilike(like)))
+                   .subquery())
+            conds.append(db.or_(Story.title.ilike(like), Story.id.in_(db.session.query(sub.c.story_id))))
+        qs = qs.filter(db.or_(*conds))
     if region:
         sub = db.session.query(Article.story_id).filter(Article.region == region).subquery()
         qs = qs.filter(Story.id.in_(sub))
@@ -81,6 +88,8 @@ def board():
     cat = request.args.get("cat") or None
     q = (request.args.get("q") or "").strip() or None
     region = request.args.get("region") or None
+    # คำเฝ้าระวังที่ถูกเลือกเป็นตัวกรอง เลือกพร้อมกันได้หลายคำ คั่นด้วย ,
+    wsel = [x.strip() for x in (request.args.get("w") or "").split(",") if x.strip()]
 
     # พิมพ์ #คำ ในช่องค้นหา = เพิ่มคำนั้นเข้ารายการเฝ้าระวัง แล้วค้นหาด้วยคำนั้นต่อ
     # ใส่หลายคำในครั้งเดียวได้ เช่น "#เหมืองแร่ #ไล่รื้อ"
@@ -120,12 +129,23 @@ def board():
     hero_articles = hero.articles.order_by(Article.published_at.desc()).all() if hero else []
     hero_first = hero_articles[-1] if hero_articles else None
 
-    ticker = (Article.query.filter(Article.fetched_at >= now() - timedelta(hours=6), Article.level.in_(["essential", "important"]))
-              .order_by(Article.published_at.desc()).limit(10).all())
+    # ตัววิ่งด้านบนเป็นของคำเฝ้าระวัง ไม่ใช่ข่าวด่วนทั่วไป
+    # ใช้ช่วง 24 ชม. เพราะข่าวที่ตรงคำเฝ้าระวังมีไม่บ่อยเท่าข่าวด่วน
+    ticker = (Article.query.filter(Article.watch_hits.isnot(None), Article.hidden.is_(False),
+                                   Article.fetched_at >= now() - timedelta(hours=24))
+              .order_by(Article.published_at.desc()).limit(12).all())
+    ticker_label = "เฝ้าระวัง"
+    if not ticker:
+        # ยังไม่มีข่าวตรงคำเฝ้าระวัง ใช้ข่าวด่วนแทนเพื่อไม่ให้แถบว่างเปล่า
+        ticker = (Article.query.filter(Article.fetched_at >= now() - timedelta(hours=6),
+                                       Article.level.in_(["essential", "important"]))
+                  .order_by(Article.published_at.desc()).limit(10).all())
+        ticker_label = "ด่วน"
 
     # ผลค้นหาเป็นแถบแยกต่างหาก ไม่ไปแทนที่เลนหมวด
     # เลนหมวดคือภาพรวมความเคลื่อนไหวทั้งหมด ถ้าถูกกรองตามคำค้นจะมองไม่เห็นเรื่องอื่นเลย
-    search_stories = _lane_stories(since, None, region, q, limit=40) if q else []
+    search_stories = (_lane_stories(since, None, region, q, limit=40, words=wsel)
+                      if (q or wsel) else [])
     if cat:
         lanes = [(cat, CATEGORIES[cat]["label"],
                   _lane_stories(since, cat, region, None, limit=30, exclude_ids=pinned_ids))]
@@ -157,8 +177,8 @@ def board():
     fetch_overdue_min = int((now() - last_fetch).total_seconds() // 60) if last_fetch else None
     total_articles = Article.query.filter(Article.fetched_at >= since).count()
 
-    return render_template("board.html", fetch_overdue_min=fetch_overdue_min, search_stories=search_stories, watch_stories=watch_stories, pins=pins, hero=hero, hero_articles=hero_articles, hero_first=hero_first,
-                           ticker=ticker, lanes=lanes, must=must, social=social, social_count=social_count,
+    return render_template("board.html", wsel=wsel, fetch_overdue_min=fetch_overdue_min, search_stories=search_stories, watch_stories=watch_stories, pins=pins, hero=hero, hero_articles=hero_articles, hero_first=hero_first,
+                           ticker=ticker, ticker_label=ticker_label, lanes=lanes, must=must, social=social, social_count=social_count,
                            trending=trending, watch_counts=watch_counts, region_rows=region_rows, region_max=region_max,
                            top_sources=top_sources, total_sources=total_sources, last_fetch=last_fetch,
                            total_articles=total_articles, hours=hours, cat=cat, q=q, region=region)
@@ -179,8 +199,17 @@ def pin(story_id):
     s = db.session.get(Story, story_id) or abort(404)
     top = request.form.get("top") == "1"
     level = request.form.get("level") or "important"
-    if Pin.query.count() >= MAX_PINS and not Pin.query.filter_by(story_id=s.id).first():
-        flash(f"ปักหมุดได้สูงสุด {MAX_PINS} ข่าว — ปลดหมุดข่าวเก่าก่อน", "error")
+    # นับเฉพาะหมุดที่คนปักเอง — หมุดจากกฎ (เช่น กฎคำเฝ้าระวัง) ไม่ควรกันคนปักเอง
+    # เพราะ renumber_pins() จะปลดหมุดจากกฎตัวท้ายให้เองเมื่อเกินโควต้า
+    limit = max_pins()
+    human_pins = Pin.query.filter(Pin.pinned_by_id.isnot(None)).count()
+    if limit > 0 and human_pins >= limit and not Pin.query.filter_by(story_id=s.id).first():
+        msg = f"ปักหมุดได้สูงสุด {limit} ข่าว — ปลดหมุดข่าวเก่าก่อน"
+        # ต้องตอบ JSON เมื่อถูกเรียกด้วย fetch ไม่งั้นฝั่งหน้าเว็บ parse ไม่ได้
+        # แล้วปุ่มจะค้างอยู่ในสถานะกดไม่ได้โดยไม่มีข้อความอธิบาย
+        if request.headers.get("X-Requested-With") == "fetch":
+            return jsonify(ok=False, message=msg), 409
+        flash(msg, "error")
         return redirect(request.referrer or url_for("main.board"))
     pin_story(s, level=level, user=current_user, top=top, auto_unpin=request.form.get("auto_unpin") or "idle12h",
               note=request.form.get("note"))
@@ -421,7 +450,7 @@ def curate():
     groups = sorted({s.group_name for s in Source.query.filter_by(source_type="social") if s.group_name})
     line_on = bool(current_app.config.get("LINE_CHANNEL_ACCESS_TOKEN") and current_app.config.get("LINE_TO"))
     return render_template("curate.html", pins=pins, suggestions=suggestions, rules=rules, watch=watch, groups=groups,
-                           line_on=line_on, max_pins=MAX_PINS, brief_time=current_app.config.get("MORNING_BRIEF_TIME"))
+                           line_on=line_on, max_pins=max_pins(), brief_time=current_app.config.get("MORNING_BRIEF_TIME"))
 
 
 @bp.route("/rules/add", methods=["POST"])

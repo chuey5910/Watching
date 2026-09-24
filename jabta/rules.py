@@ -9,7 +9,16 @@ from .line import push_text
 
 log = logging.getLogger("jabta.rules")
 
-MAX_PINS = 5
+MAX_PINS = 0  # ค่าสำรองเมื่อไม่มี app context — 0 = ไม่จำกัด
+
+
+def max_pins() -> int:
+    """จำนวนหมุดสูงสุดจากค่าตั้ง — 0 หรือติดลบ = ไม่จำกัด"""
+    try:
+        from flask import current_app
+        return int(current_app.config.get("MAX_PINS", MAX_PINS) or 0)
+    except Exception:
+        return MAX_PINS
 
 
 WATCH_RULE_NAME = "คำเฝ้าระวัง (ระบบจัดการให้)"
@@ -105,8 +114,11 @@ def renumber_pins():
     pins = Pin.query.order_by(Pin.position.asc(), Pin.pinned_at.asc()).all()
     for i, p in enumerate(pins, start=1):
         p.position = i
-    # เกิน MAX_PINS → ปลดตัวท้ายที่มาจากกฎก่อน ตัวที่คนปักเองไม่แตะ
-    while len(pins) > MAX_PINS:
+    limit = max_pins()
+    if limit <= 0:
+        return                       # ไม่จำกัดจำนวนหมุด
+    # เกินโควต้า → ปลดตัวท้ายที่มาจากกฎก่อน ตัวที่คนปักเองไม่แตะ
+    while len(pins) > limit:
         victims = [p for p in reversed(pins) if p.pinned_by_rule_id]
         if not victims:
             break

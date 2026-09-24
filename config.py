@@ -43,6 +43,8 @@ class Config:
     # ผู้ใช้คนแรกที่สมัครจะเป็น admin และอนุมัติอัตโนมัติ
     FIRST_USER_IS_ADMIN = _bool("FIRST_USER_IS_ADMIN", True)
     MAX_LOGIN_FAILS = int(os.environ.get("MAX_LOGIN_FAILS", "8"))
+    # จำนวนหมุดสูงสุด — 0 = ไม่จำกัด (ค่าเริ่มต้น)
+    MAX_PINS = int(os.environ.get("MAX_PINS", "0"))
     LOCKOUT_MINUTES = int(os.environ.get("LOCKOUT_MINUTES", "15"))
 
     # ---------- ดึงข่าว ----------
