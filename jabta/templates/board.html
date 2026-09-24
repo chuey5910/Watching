@@ -133,7 +133,11 @@
         {% for k, c in CATEGORIES.items() %}<a class="pill {{ 'on' if cat == k }} {{ 'bcat-'+k+' cat-'+k if cat != k }}" href="{{ url_for('main.board', cat=k, q=q, h=hours, region=region) }}">{{ c.label }}</a>{% endfor %}
         <span class="grow"></span>
         {% for hh, lab in [(6,'6 ชม.'),(24,'24 ชม.'),(72,'3 วัน'),(168,'7 วัน')] %}<a class="pill {{ 'on' if hours == hh }}" href="{{ url_for('main.board', cat=cat, q=q, h=hh, region=region) }}">{{ lab }}</a>{% endfor %}
-        {% if q or region or wsel %}<a class="pill" style="border-color:var(--red);color:var(--red)" href="{{ url_for('main.board') }}">ล้างตัวกรอง{% if q %} “{{ q }}”{% endif %}{% if wsel %} “{{ wsel|join('” “') }}”{% endif %}{% if region %} · {{ region }}{% endif %} ✕</a>{% endif %}
+        {# ตัวกรองแต่ละตัวมีปุ่มปิดของตัวเอง กดเอาออกทีละคำได้ ไม่ใช่ล้างหมดในปุ่มเดียว #}
+        {% for w in wsel %}<a class="pill filterpill" href="{{ url_for('main.board', w=(wsel|reject('equalto', w)|list)|join(','), q=q, h=hours, region=region) }}" title="เอา “{{ w }}” ออกจากตัวกรอง">{{ w|tw }} ✕</a>{% endfor %}
+        {% if q %}<a class="pill filterpill" href="{{ url_for('main.board', w=wsel|join(','), h=hours, region=region) }}" title="ล้างคำค้น">“{{ q|tw }}” ✕</a>{% endif %}
+        {% if region %}<a class="pill filterpill" href="{{ url_for('main.board', w=wsel|join(','), q=q, h=hours) }}" title="ล้างพื้นที่">{{ region }} ✕</a>{% endif %}
+        {% if (wsel|length) + (1 if q else 0) + (1 if region else 0) > 1 %}<a class="pill" style="border-color:var(--dim);color:var(--mute)" href="{{ url_for('main.board', h=hours) }}">ล้างทั้งหมด ✕</a>{% endif %}
       </div>
 
       {% if q or wsel %}
