@@ -61,6 +61,10 @@ jabta/
     ├── rules.py           pin_story(), renumber_pins() (เพดานจาก MAX_PINS, 0 = ไม่จำกัด), apply_rules(), expire_pins(), send_alerts(), morning_brief_text()
     ├── scheduler.py       APScheduler: fetch_job ทุก FETCH_INTERVAL_MINUTES, morning brief cron
     ├── line.py            push_text() ผ่าน LINE Messaging API (เงียบถ้าไม่ตั้ง token)
+    ├── article_body.py    ดึงเนื้อข่าวจากหน้าเว็บต้นทาง (RSS ให้สรุปแค่ 50-60 ตัวอักษร ไม่พอทำ 5W1H)
+    ├── fivew.py           สกัด 5W1H ด้วยกฎภาษา (ใคร/ที่ไหน/เมื่อไหร่ แม่น · อย่างไร/ทำไม จับจากคำเชื่อมเหตุผล)
+    ├── thaiwrap.py        ตัดคำไทยแล้วแทรก U+200B กันเบราว์เซอร์หั่นกลางคำ
+    ├── watchlist.py       อ่าน PDF รายชื่อเพจ/บุคคลเฝ้าระวัง แล้วแยกประเภท
     ├── seed_sources.py    รายชื่อสื่อ 148 แหล่ง + DEFAULT_RULES 4 ข้อ + DEFAULT_WATCH คำสำคัญ
     ├── static/style.css   ดีไซน์ทั้งหมด (CSS variables, responsive ≤1200px)
     └── templates/         base.html, board.html, story.html, sources.html, source_edit.html, _source_form.html, _source_form_js.html,
@@ -87,7 +91,7 @@ jabta/
 |---|---|---|
 | `users` | บัญชี | `status`: pending/approved/rejected/disabled · `role`: admin/member · `tailscale_login` ผูกตัวตน TS · `is_active` คืน True เฉพาะ approved (Flask-Login จึงกัน pending เอง) · `failed_logins`/`locked_until` |
 | `sources` | แหล่งข่าว/บัญชี | `source_type`: mainstream/local/foreign/government/social · `fetch_kind`: rss/html/gnews/gnews_query/telegram/youtube/bluesky/rsshub · `feed_url` มีความหมายต่างกันตาม kind (RSS url / โดเมน / คำค้น / channel id) · `resolved_feed_url` = url ที่ค้นพบ/fallback จริง · `categories` (คั่น ,) หมวดที่ให้เก็บ · `keep_all` ข้ามการกรอง · `alert_categories`/`alert_keywords` → `Article.is_alert` · `group_name` กลุ่มบัญชี (ใช้กับกฎ) · `etag`/`modified` conditional GET |
-| `articles` | ข่าวรายชิ้น | `url_hash` sha1(canonical_url) unique = dedupe · `category` หลัก + `categories` ทั้งหมด · `level` · `matched_keywords` · `story_id` |
+| `articles` | ข่าวรายชิ้น | `body` เนื้อข่าวจากหน้าต้นทาง (ใช้ทำ 5W1H) · `watch_hits` คำเฝ้าระวังที่เจอ · `url_hash` sha1(canonical_url) unique = dedupe · `category` หลัก + `categories` ทั้งหมด · `level` · `matched_keywords` · `story_id` |
 | `stories` | กลุ่มข่าวเรื่องเดียวกัน | `source_count`, `social_count`, `local_first` (ท้องถิ่น/บุคคลรายงานก่อนสื่อหลัก ≥2 ชม.), `watch_hits` คำเฝ้าระวังที่เจอในกลุ่ม, `score` (จัดอันดับ), `level` = สูงสุดในกลุ่ม, `title` เอาจากสื่อหลัก/รัฐก่อน · **`score` ใช้ตรรกะเฝ้าระวัง ไม่ใช่ตรรกะข่าว** — `source_count` ไม่มีน้ำหนักเลย เพราะวัดความดังของข่าว ไม่ได้วัดความสำคัญต่อการเฝ้าระวัง ปรับน้ำหนักที่ `cluster.W_*` |
 | `pins` | หมุด | unique ต่อ story · `position` เรียง 1..n (ไม่จำกัดจำนวนแล้ว ตั้งเพดานได้ที่ `MAX_PINS` ใน .env, 0 = ไม่จำกัด) · `auto_unpin`: idle12h/idle24h/tomorrow06/never · `pinned_by_id` (คน) หรือ `pinned_by_rule_id` (กฎ) |
 | `rules` | กฎอัตโนมัติ | เงื่อนไข: category, min_sources, within_hours, keywords, source_type, source_group → action: pin/pin_top/flag (+notify_line, set_level) · `hits` |

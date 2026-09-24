@@ -194,6 +194,10 @@ class Article(db.Model):
     # คำเฝ้าระวังที่เจอในหัวข้อหรือเนื้อข่าว คั่น , — ข่าวที่มีค่านี้จะไม่ถูกกรองทิ้ง
     # แม้ไม่เข้า 5 หมวด เพราะผู้ใช้สั่งเฝ้าระวังคำนั้นไว้เอง
     watch_hits = db.Column(db.String(400))
+    # เนื้อข่าวย่อหน้าต้น ๆ ที่ดึงจากหน้าเว็บต้นทาง — RSS ให้สรุปมาแค่ 50-60 ตัวอักษร
+    # ซึ่งไม่พอจะรู้ว่าใครทำอะไรที่ไหน ต้องไปอ่านหน้าจริงถึงจะได้ 5W1H
+    body = db.Column(db.Text)
+    body_fetched_at = db.Column(db.DateTime)
     hidden = db.Column(db.Boolean, default=False)
 
     @property

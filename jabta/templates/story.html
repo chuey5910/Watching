@@ -15,6 +15,20 @@
     <span>รายงานแรก {{ s.first_seen_at|fmt_time('%d/%m %H:%M') }} น.</span><span>·</span>
     <span>ล่าสุด {{ s.last_seen_at|fmt_time('%d/%m %H:%M') }} น. ({{ s.last_seen_at|ago }})</span>
   </div>
+  <div class="fivew">
+    <div class="kicker">สรุป 5W1H</div>
+    <dl>
+      {% for k in ['ใคร','ทำอะไร','ที่ไหน','เมื่อไหร่','อย่างไร','ทำไม'] %}
+      <div class="fivew-row">
+        <dt>{{ k }}</dt>
+        <dd>{% if k == 'เมื่อไหร่' and k not in five %}{{ s.first_seen_at|fmt_time('%d/%m/%Y %H:%M') }} น.{% elif k in five %}{{ five[k]|tw }}{% else %}<span class="dim">— ไม่พบในเนื้อข่าว</span>{% endif %}</dd>
+      </div>
+      {% endfor %}
+    </dl>
+    <div class="xs dim">สกัดด้วยกฎภาษาจากเนื้อข่าวที่ดึงมาจากเว็บต้นทาง ไม่ได้ใช้โมเดลภาษา —
+      ช่องที่ผู้เขียนไม่ได้ระบุไว้ตรง ๆ จะขึ้นว่าไม่พบ แทนการเดา</div>
+  </div>
+
   <div class="row wrap">
     {% if s.pin %}<button class="btn" data-pin="{{ s.id }}" data-unpin="1">ปลดหมุด</button>{% else %}
       <button class="btn danger" data-pin="{{ s.id }}" data-top="1">ปักหมุดอันดับ 1</button>

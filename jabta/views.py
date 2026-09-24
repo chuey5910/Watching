@@ -14,6 +14,8 @@ from .models import (db, User, Source, Article, Story, Pin, Rule, Keyword, Audit
 from .security import audit, admin_required, tailscale_identity
 from .rules import pin_story, renumber_pins, max_pins, expire_pins, apply_rules, send_alerts, sync_watch_rule
 from .fetcher import run_fetch, fetch_source, domain_of
+from .article_body import fetch_bodies
+from .fivew import extract as fivew_extract, missing as fivew_missing
 from . import classifier
 
 bp = Blueprint("main", __name__)
@@ -189,7 +191,14 @@ def board():
 def story(story_id):
     s = db.session.get(Story, story_id) or abort(404)
     arts = s.articles.order_by(Article.published_at.desc()).all()
-    return render_template("story.html", s=s, arts=arts)
+    # รวมเนื้อข่าวจากทุกแหล่งในกลุ่มก่อนสกัด 5W1H — แหล่งหนึ่งอาจบอกว่าใคร
+    # อีกแหล่งบอกว่าทำไม รวมกันจึงได้ข้อมูลครบกว่าอ่านแหล่งเดียว
+    bodies = "\n".join(a.body for a in arts if a.body)
+    best = next((a for a in arts if a.body), arts[0] if arts else None)
+    five = fivew_extract(s.title, bodies, published_at=None,
+                         region=(best.region if best else None)) if arts else {}
+    return render_template("story.html", s=s, arts=arts, five=five,
+                           five_missing=fivew_missing(five), body_text=(best.body if best else None))
 
 
 # ---------- ปักหมุด ----------
@@ -335,7 +344,7 @@ def source_add():
     audit("source_add", target=f"source:{src.id}", detail=f"{src.name} [{src.source_type}/{src.fetch_kind}] {src.feed_url or src.homepage}")
     # ดึงครั้งแรกทันที
     try:
-        s = run_fetch([src.id]); apply_rules(s["kept_ids"])
+        s = run_fetch([src.id]); apply_rules(s["kept_ids"]); fetch_bodies(s["kept_ids"])
         flash(f"เพิ่ม “{src.name}” แล้ว — ดึงครั้งแรกได้ {s['kept']} ข่าวที่เข้าหมวด (สถานะ: {src.last_status})", "ok")
     except Exception as ex:
         flash(f"เพิ่มแล้ว แต่ดึงครั้งแรกไม่สำเร็จ: {ex}", "error")
@@ -388,7 +397,7 @@ def source_delete(sid):
 @login_required
 def source_fetch(sid):
     src = db.session.get(Source, sid) or abort(404)
-    s = run_fetch([sid]); apply_rules(s["kept_ids"])
+    s = run_fetch([sid]); apply_rules(s["kept_ids"]); fetch_bodies(s["kept_ids"])
     src = db.session.get(Source, sid)
     audit("source_fetch", target=f"source:{sid}", detail=f"{src.name} status={src.last_status} kept={s['kept']}")
     flash(f"{src.name}: {src.last_status} · ใหม่ {s['new']} · เก็บ {s['kept']}" + (f" · {src.last_error}" if src.last_error else ""),
@@ -512,6 +521,7 @@ def keyword_delete(kid):
 @login_required
 def fetch_now():
     s = run_fetch(); apply_rules(s["kept_ids"]); send_alerts(s["alert_ids"]); expire_pins()
+    fetch_bodies(s["kept_ids"])
     audit("fetch_now", detail=f"sources={s['sources']} ok={s['ok']} error={s['error']} new={s['new']} kept={s['kept']}")
     flash(f"ดึงข่าวเสร็จ: {s['sources']} แหล่ง · สำเร็จ {s['ok']} · ผิดพลาด {s['error']} · เก็บใหม่ {s['kept']} ข่าว", "ok")
     return redirect(request.referrer or url_for("main.board"))

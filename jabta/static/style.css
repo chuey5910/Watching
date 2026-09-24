@@ -211,3 +211,10 @@ main.center{min-width:0;display:flex;flex-direction:column}
 .watchchip.sel{background:var(--red);border-color:var(--red)}
 .watchchip.sel a,.watchchip.sel span{color:var(--bg);font-weight:600}
 .watchchip.sel button{color:var(--bg);opacity:.6}
+
+/* บล็อกสรุป 5W1H ในหน้าข่าว */
+.fivew{margin:18px 0;padding:18px 22px;border:1px solid var(--line2);border-radius:8px;background:var(--panel)}
+.fivew dl{margin:10px 0 12px;display:grid;gap:8px}
+.fivew-row{display:grid;grid-template-columns:110px minmax(0,1fr);gap:14px;align-items:baseline}
+.fivew dt{color:var(--red);font-weight:700;font-size:17px}
+.fivew dd{margin:0;color:var(--ink2);line-height:1.55}

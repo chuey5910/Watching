@@ -39,6 +39,8 @@ def setup_logging(app: Flask):
 # โปรเจกต์นี้ไม่มี migration tool — create_all() สร้างตารางใหม่ได้แต่ไม่เพิ่ม
 # คอลัมน์ให้ตารางที่มีอยู่แล้ว จึงต้องเติมเองแบบ idempotent ตอนสตาร์ท
 NEW_COLUMNS = [("articles", "watch_hits", "VARCHAR(400)"),
+               ("articles", "body", "TEXT"),
+               ("articles", "body_fetched_at", "DATETIME"),
                ("stories", "watch_hits", "VARCHAR(400)")]
 
 
@@ -154,7 +156,9 @@ def create_app(config_object=Config) -> Flask:
         from .rules import apply_rules, expire_pins, send_alerts
         s = run_fetch([source_id] if source_id else None)
         apply_rules(s["kept_ids"]); send_alerts(s["alert_ids"]); expire_pins()
-        click.echo(f"แหล่ง {s['sources']} ok={s['ok']} error={s['error']} ใหม่={s['new']} เก็บ={s['kept']}")
+        from .article_body import fetch_bodies
+        got = fetch_bodies(s["kept_ids"])
+        click.echo(f"แหล่ง {s['sources']} ok={s['ok']} error={s['error']} ใหม่={s['new']} เก็บ={s['kept']} เนื้อข่าว={got}")
 
     @app.cli.command("source-report")
     @click.option("--all", "show_all", is_flag=True, help="แสดงทุกแหล่ง ไม่ใช่เฉพาะที่มีปัญหา")

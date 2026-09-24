@@ -95,7 +95,7 @@
           <span class="small mute">{% if hero_first and hero_first.region %}{{ hero_first.region }} · {% endif %}เริ่ม {{ hero.first_seen_at|fmt_time }} น. · ล่าสุด {{ hero.last_seen_at|ago }}{% if hero.local_first %} · <span style="color:var(--gold)">สื่อท้องถิ่น/บุคคลรายงานก่อน</span>{% endif %}</span>
         </div>
         <h1><a href="{{ url_for('main.story', story_id=hero.id) }}">{{ hero.title|tw }}</a></h1>
-        {% if hero_articles and hero_articles[0].summary %}<p>{{ hero_articles[0].summary[:420]|tw }}{% if hero_articles[0].summary|length > 420 %}…{% endif %}</p>{% endif %}
+        {% if hero_articles %}{% set lead = (hero_articles|selectattr('body')|map(attribute='body')|first) or hero_articles[0].summary %}{% if lead %}<p>{{ lead[:420]|tw }}{% if lead|length > 420 %}…{% endif %}</p>{% endif %}{% endif %}
         <div class="row wrap small mute" style="gap:8px 14px">
           <span style="font-weight:600;color:var(--ink)">รายงานตรงกัน {{ hero.source_count }} แหล่ง:</span>
           {% for s in hero.source_names(6) %}<span>{{ srcname(s) }}</span>{% if not loop.last %}<span>·</span>{% endif %}{% endfor %}

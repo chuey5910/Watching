@@ -6,6 +6,7 @@ import time
 from apscheduler.events import EVENT_JOB_ERROR, EVENT_JOB_MAX_INSTANCES, EVENT_JOB_MISSED
 from apscheduler.schedulers.background import BackgroundScheduler
 
+from .article_body import fetch_bodies
 from .fetcher import run_fetch
 from .rules import apply_rules, expire_pins, send_alerts, send_morning_brief
 
@@ -21,6 +22,9 @@ def fetch_job(app):
             apply_rules(summary["kept_ids"])
             send_alerts(summary["alert_ids"])
             expire_pins()
+            # ดึงเนื้อข่าวหลังจัดการหมุดเสร็จ — เนื้อข่าวใช้แสดงรายละเอียด 5W1H
+            # ไม่ใช่สิ่งที่ต้องรอก่อนปักหมุดหรือแจ้งเตือน
+            fetch_bodies(summary["kept_ids"])
             took = time.monotonic() - t0
             interval = app.config["FETCH_INTERVAL_MINUTES"] * 60
             log.info("fetch_job เสร็จใน %.0f วินาที", took)
